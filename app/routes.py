@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify
-from .models import db, dementia_info, nok_info
+from .models import db, dementia_info, nok_info, location_info
 from .random_generator import RandomNumberGenerator
 
 # 블루프린트 생성
 nok_info_routes = Blueprint('nok_info_routes', __name__)
 dementia_info_routes = Blueprint('dementia_info_routes', __name__)
+location_info_routes = Blueprint('location_info_routes', __name__)
 
 @nok_info_routes.route('/receive_nok_info', methods=['POST'])
 def receive_nok_info():
@@ -51,6 +52,42 @@ def receive_dementia_info():
         db.session.commit()
         
         response_data = {'status': 'success', 'message': 'Dementia paitient data received successfully', 'key': Key}
+        return jsonify(response_data)
+    
+    except Exception as e:
+        response_data = {'status': 'error', 'message': str(e)}
+        return jsonify(response_data), 500
+    
+@location_info_routes.route('/receive_location_info', methods=['POST'])
+def receive_location_info():
+    try:
+        data = request.json
+        _key = data.get('key')
+        _date = data.get('date')
+        _time = data.get('time')
+        _latitude = data.get('latitude')
+        _longitude = data.get('longitude')
+        _user_status = data.get('user_status')
+        _accelerationsensor_x = data.get('accelerationsensor_x')
+        _accelerationsensor_y = data.get('accelerationsensor_y')
+        _accelerationsensor_z = data.get('accelerationsensor_z')
+        _gyrosensor_x = data.get('gyrosensor_x')
+        _gyrosensor_y = data.get('gyrosensor_y')
+        _gyrosensor_z = data.get('gyrosensor_z')
+        _directionsensor_x = data.get('directionsensor_x')
+        _directionsensor_y = data.get('directionsensor_y')
+        _directionsensor_z = data.get('directionsensor_z')
+        _lightsensor = data.get('lightsensor')
+        _battery = data.get('battery')
+        _isInternetOn = data.get('isInternetOn')
+        _isGpsOn = data.get('isGpsOn')
+        _isRinstoneOn = data.get('isRinstoneOn')
+
+        new_location = location_info(key = _key, date=_date, time=_time, latitude=_latitude, longitude=_longitude, user_status=_user_status, accelerationsensor_x=_accelerationsensor_x, accelerationsensor_y=_accelerationsensor_y, accelerationsensor_z=_accelerationsensor_z, gyrosensor_x=_gyrosensor_x, gyrosensor_y=_gyrosensor_y, gyrosensor_z=_gyrosensor_z, directionsensor_x=_directionsensor_x, directionsensor_y=_directionsensor_y, directionsensor_z=_directionsensor_z, lightsensor=_lightsensor, battery=_battery, isInternetOn=_isInternetOn, isGpsOn=_isGpsOn, isRinstoneOn=_isRinstoneOn)
+        db.session.add(new_location)
+        db.session.commit()
+        
+        response_data = {'status': 'success', 'message': 'Location data received successfully'}
         return jsonify(response_data)
     
     except Exception as e:
