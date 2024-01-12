@@ -7,6 +7,7 @@ nok_info_routes = Blueprint('nok_info_routes', __name__)
 dementia_info_routes = Blueprint('dementia_info_routes', __name__)
 location_info_routes = Blueprint('location_info_routes', __name__)
 
+
 @nok_info_routes.route('/receive_nok_info', methods=['POST'])
 def receive_nok_info():
     try:
@@ -62,6 +63,7 @@ def receive_dementia_info():
 def receive_location_info():
     try:
         data = request.json
+        
         _key = data.get('key')
         _date = data.get('date')
         _time = data.get('time')
