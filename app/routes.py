@@ -93,5 +93,6 @@ def receive_location_info():
         return jsonify(response_data)
     
     except Exception as e:
+        print(e)
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), 500
