@@ -16,6 +16,7 @@
 
 ## ERD
 
--
+![ERD](https://github.com/tukcomCD2024/YooDoRi/assets/25702499/49a4af75-bd64-4944-ad96-9eead085108a)
+
 
 ## 디자인
