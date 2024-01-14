@@ -1,4 +1,5 @@
 from . import db
+from geoalchemy2 import Geometry
 
 class nok_info(db.Model):
     key = db.Column(db.Integer, primary_key=True)
@@ -12,24 +13,22 @@ class dementia_info(db.Model):
 
 class location_info(db.Model):
     key = db.Column(db.Integer, primary_key=True)
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
-    time = db.Column(db.Time)
     date = db.Column(db.Date)
+    time = db.Column(db.Time)
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
-    user_status = db.Column(db.String(255))
+    user_status = db.Column(Geometry(geometry_type='POINT'))  # LINESTRING 형식에 대한 처리 필요
     accelerationsensor_x = db.Column(db.Float)
     accelerationsensor_y = db.Column(db.Float)
     accelerationsensor_z = db.Column(db.Float)
-    gyrosensor_x = db.Column(db.Float)
-    gyrosensor_y = db.Column(db.Float)
-    gyrosensor_z = db.Column(db.Float)
     directionsensor_x = db.Column(db.Float)
     directionsensor_y = db.Column(db.Float)
     directionsensor_z = db.Column(db.Float)
+    gyrosensor_x = db.Column(db.Float)
+    gyrosensor_y = db.Column(db.Float)
+    gyrosensor_z = db.Column(db.Float)
     lightsensor = db.Column(db.Float)
-    battery = db.Column(db.Float)
+    battery = db.Column(db.Integer)
     isInternetOn = db.Column(db.Boolean)
+    isRingstoneOn = db.Column(db.Boolean)
     isGpsOn = db.Column(db.Boolean)
-    isRinstoneOn = db.Column(db.Boolean)
