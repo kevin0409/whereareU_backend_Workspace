@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
+import os
 
 db = SQLAlchemy()
 
@@ -18,3 +19,8 @@ def create_app():
     app.register_blueprint(location_info_routes)
 
     return app
+
+def create_db():
+    with db.app.app_context():
+        if not os.path.exists('website/' + db.engine.url.database):
+            db.create_all()
