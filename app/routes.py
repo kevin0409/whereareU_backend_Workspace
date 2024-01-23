@@ -4,12 +4,12 @@ from .random_generator import RandomNumberGenerator
 from sqlalchemy import text
 
 # 블루프린트 생성
-nok_info_routes = Blueprint('nok_info_routes', __name__)
-dementia_info_routes = Blueprint('dementia_info_routes', __name__)
-location_info_routes = Blueprint('location_info_routes', __name__)
+nok_info_routes = Blueprint('nok-info-routes', __name__)
+dementia_info_routes = Blueprint('dementia-info-routes', __name__)
+location_info_routes = Blueprint('location-info-routes', __name__)
 
 
-@nok_info_routes.route('/receive_nok_info', methods=['POST'])
+@nok_info_routes.route('/receive-nok-info', methods=['POST'])
 def receive_nok_info():
     try:
         nok_data = request.json
@@ -41,7 +41,7 @@ def receive_nok_info():
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), 500
     
-@dementia_info_routes.route('/receive_dementia_info', methods=['POST'])
+@dementia_info_routes.route('/receive-dementia-info', methods=['POST'])
 def receive_dementia_info():
     try:
         dementia_data = request.json
@@ -67,7 +67,7 @@ def receive_dementia_info():
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), 500
     
-@location_info_routes.route('/receive_location_info', methods=['POST'])
+@location_info_routes.route('/receive-location-info', methods=['POST'])
 def receive_location_info():
     try:
         data = request.json
