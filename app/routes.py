@@ -4,9 +4,9 @@ from .random_generator import RandomNumberGenerator
 from sqlalchemy import text
 
 # 블루프린트 생성
-nok_info_routes = Blueprint('nok-info-routes', __name__)
-dementia_info_routes = Blueprint('dementia-info-routes', __name__)
-location_info_routes = Blueprint('location-info-routes', __name__)
+nok_info_routes = Blueprint('nok_info_routes', __name__)
+dementia_info_routes = Blueprint('dementia_info_routes', __name__)
+location_info_routes = Blueprint('location_info_routes', __name__)
 
 
 @nok_info_routes.route('/receive-nok-info', methods=['POST'])

@@ -1,6 +1,6 @@
 from . import db
 from geoalchemy2 import Geometry
-#db 구조 변경 예정
+
 class nok_info(db.Model):
     num = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nok_key = db.Column(db.Integer, unique=True)
