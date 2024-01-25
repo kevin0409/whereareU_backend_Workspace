@@ -1,5 +1,4 @@
 from app import create_app
-from werkzeug.serving import run_simple
 import os
 
 app = create_app()

@@ -13,19 +13,19 @@ location_info_routes = Blueprint('location_info_routes', __name__)
 def receive_nok_info():
     try:
         nok_data = request.json
-        keyfromnok = nok_data.get('keyfromnok')
+        _keyfromdementia = nok_data.get('keyfromdementia')
         rng = RandomNumberGenerator()
 
         # 인증번호 중복 여부 확인
-        existing_dementia = dementia_info.query.filter_by(dementia_key=keyfromnok).first()
+        existing_dementia = dementia_info.query.filter_by(dementia_key=_keyfromdementia).first()
         if existing_dementia:
             # 이미 등록된 인증번호에 해당하는 환자 정보가 있을 경우, 해당 환자의 key 값을 가져옴
             for _ in range(10):
                 unique_random_number = rng.generate_unique_random_number(100000, 999999)
             
-            Key = str(unique_random_number)  # 키 값을 문자열로 변환
+            _key = str(unique_random_number)  # 키 값을 문자열로 변환
 
-            new_user = nok_info(nok_key=Key, nok_name=nok_data.get('name'), nok_phonenumber=nok_data.get('phone_number'), dementia_info_key = keyfromnok)
+            new_user = nok_info(nok_key=_key, nok_name=nok_data.get('name'), nok_phonenumber=nok_data.get('phone_number'), dementia_info_key = _keyfromdementia)
             db.session.add(new_user)
             db.session.commit()
 
@@ -51,16 +51,16 @@ def receive_dementia_info():
         for _ in range(10):
             unique_random_numberfordementia = rng.generate_unique_random_number(100000, 999999)
     
-        dementia_Key = str(unique_random_numberfordementia)  # 키 값을 문자열로 변환
+        _dementia_key = str(unique_random_numberfordementia)  # 키 값을 문자열로 변환
     
-        Dementia_name = dementia_data.get('name')
-        Dementia_phonenumber = dementia_data.get('phone_number')
+        _dementia_name = dementia_data.get('name')
+        _dementia_phonenumber = dementia_data.get('phone_number')
 
-        new_user = dementia_info(dementia_key=dementia_Key, dementia_name = Dementia_name, dementia_phonenumber=Dementia_phonenumber)
+        new_user = dementia_info(dementia_key=_dementia_key, dementia_name = _dementia_name, dementia_phonenumber=_dementia_phonenumber)
         db.session.add(new_user)
         db.session.commit()
         
-        response_data = {'status': 'success', 'message': 'Dementia paitient data received successfully', 'key': dementia_Key}
+        response_data = {'status': 'success', 'message': 'Dementia paitient data received successfully', 'key': _dementia_key}
         return jsonify(response_data)
     
     except Exception as e:
@@ -76,7 +76,7 @@ def receive_location_info():
         point_string = "POINT({} {})".format(data.get('latitude'), data.get('longitude'))
 
         new_location = location_info(
-            dementia_key=data.get('key'),
+            dementia_key=data.get('dementia_key'),
             date=data.get('date'),
             time=data.get('time'),
             latitude=data.get('latitude'),
