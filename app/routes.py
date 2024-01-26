@@ -7,6 +7,7 @@ from sqlalchemy import text
 nok_info_routes = Blueprint('nok_info_routes', __name__)
 dementia_info_routes = Blueprint('dementia_info_routes', __name__)
 location_info_routes = Blueprint('location_info_routes', __name__)
+user_login_routes = Blueprint('user_login_routes', __name__)
 
 
 @nok_info_routes.route('/receive-nok-info', methods=['POST'])
@@ -29,7 +30,7 @@ def receive_nok_info():
             db.session.add(new_user)
             db.session.commit()
 
-            response_data = {'status': 'success', 'message': 'Next of kin data received successfully'}
+            response_data = {'status': 'success', 'message': 'Next of kin data received successfully', 'key' : _key}
         else:
             # 인증번호가 등록되지 않은 경우, 오류 전송
             response_data = {'status': 'error', 'message': 'Certification number not found'}
@@ -61,6 +62,33 @@ def receive_dementia_info():
         db.session.commit()
         
         response_data = {'status': 'success', 'message': 'Dementia paitient data received successfully', 'key': _dementia_key}
+        return jsonify(response_data)
+    
+    except Exception as e:
+        response_data = {'status': 'error', 'message': str(e)}
+        return jsonify(response_data), 500
+    
+@user_login_routes.route('/receive-user-login', methods=['POST'])
+def receive_user_login():
+    try:
+        data = request.json
+        
+        _key = data.get('key')
+        _isdementia = data.get('isdementia') # 0: NOK, 1: dementia
+
+        if _isdementia == 0: # nok일 경우
+            existing_nok = nok_info.query.filter_by(nok_key=_key).first()
+            if existing_nok:
+                response_data = {'status': 'success', 'message': 'Login success'}
+            else:
+                response_data = {'status': 'error', 'message': 'Login failed'}
+        else: # dementia일 경우
+            existing_dementia = dementia_info.query.filter_by(dementia_key=_key).first()
+            if existing_dementia:
+                response_data = {'status': 'success', 'message': 'Login success'}
+            else:
+                response_data = {'status': 'error', 'message': 'Login failed'}
+
         return jsonify(response_data)
     
     except Exception as e:
