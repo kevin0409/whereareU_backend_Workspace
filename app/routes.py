@@ -30,7 +30,7 @@ def receive_nok_info():
             db.session.add(new_user)
             db.session.commit()
 
-            response_data = {'status': 'success', 'message': 'Next of kin data received successfully', 'key' : _key}
+            response_data = {'status': 'success', 'message': 'Next of kin data received successfully', 'nok_key' : _key}
         else:
             # 인증번호가 등록되지 않은 경우, 오류 전송
             response_data = {'status': 'error', 'message': 'Certification number not found'}
@@ -61,7 +61,7 @@ def receive_dementia_info():
         db.session.add(new_user)
         db.session.commit()
         
-        response_data = {'status': 'success', 'message': 'Dementia paitient data received successfully', 'key': _dementia_key}
+        response_data = {'status': 'success', 'message': 'Dementia paitient data received successfully', 'dementia_key': _dementia_key}
         return jsonify(response_data)
     
     except Exception as e:
@@ -70,6 +70,7 @@ def receive_dementia_info():
     
 @user_login_routes.route('/receive-user-login', methods=['POST'])
 def receive_user_login():
+    response_data = {}
     try:
         data = request.json
         
@@ -82,7 +83,7 @@ def receive_user_login():
                 response_data = {'status': 'success', 'message': 'Login success'}
             else:
                 response_data = {'status': 'error', 'message': 'Login failed'}
-        else: # dementia일 경우
+        elif _isdementia == 1: # dementia일 경우
             existing_dementia = dementia_info.query.filter_by(dementia_key=_key).first()
             if existing_dementia:
                 response_data = {'status': 'success', 'message': 'Login success'}
