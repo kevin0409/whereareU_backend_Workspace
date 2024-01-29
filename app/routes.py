@@ -7,6 +7,7 @@ from sqlalchemy import text
 nok_info_routes = Blueprint('nok_info_routes', __name__)
 dementia_info_routes = Blueprint('dementia_info_routes', __name__)
 location_info_routes = Blueprint('location_info_routes', __name__)
+send_location_info_routes = Blueprint('send_live_location_info_routes', __name__)
 user_login_routes = Blueprint('user_login_routes', __name__)
 
 
@@ -101,39 +102,82 @@ def receive_location_info():
     try:
         data = request.json
         
-        # Convert latitude and longitude to POINT format
-        point_string = "POINT({} {})".format(data.get('latitude'), data.get('longitude'))
+        _dementia_key = data.get('dementia_key')
+        
+        existing_dementia = dementia_info.query.filter_by(dementia_key=_dementia_key).first()
 
-        new_location = location_info(
-            dementia_key=data.get('dementia_key'),
-            date=data.get('date'),
-            time=data.get('time'),
-            latitude=data.get('latitude'),
-            longitude=data.get('longitude'),
-            user_status=text("ST_GeomFromText(:point_string)").params(point_string=point_string),
-            accelerationsensor_x=data.get('accelerationsensor_x'),
-            accelerationsensor_y=data.get('accelerationsensor_y'),
-            accelerationsensor_z=data.get('accelerationsensor_z'),
-            gyrosensor_x=data.get('gyrosensor_x'),
-            gyrosensor_y=data.get('gyrosensor_y'),
-            gyrosensor_z=data.get('gyrosensor_z'),
-            directionsensor_x=data.get('directionsensor_x'),
-            directionsensor_y=data.get('directionsensor_y'),
-            directionsensor_z=data.get('directionsensor_z'),
-            lightsensor=data.get('lightsensor'),
-            battery=data.get('battery'),
-            isInternetOn=data.get('isInternetOn'),
-            isGpsOn=data.get('isGpsOn'),
-            isRingstoneOn=data.get('isRingstoneOn')
-        )
-        
-        db.session.add(new_location)
-        db.session.commit()
-        
-        response_data = {'status': 'success', 'message': 'Location data received successfully'}
+        if existing_dementia:
+            new_location = location_info(
+                dementia_key=data.get('dementia_key'),
+                date=data.get('date'),
+                time=data.get('time'),
+                latitude=data.get('latitude'),
+                longitude=data.get('longitude'),
+                user_status=data.get('user_status'), # 0: 정지, 1: 도보, 2: 달리기, 3: 차량
+                accelerationsensor_x=data.get('accelerationsensor_x'),
+                accelerationsensor_y=data.get('accelerationsensor_y'),
+                accelerationsensor_z=data.get('accelerationsensor_z'),
+                gyrosensor_x=data.get('gyrosensor_x'),
+                gyrosensor_y=data.get('gyrosensor_y'),
+                gyrosensor_z=data.get('gyrosensor_z'),
+                directionsensor_x=data.get('directionsensor_x'),
+                directionsensor_y=data.get('directionsensor_y'),
+                directionsensor_z=data.get('directionsensor_z'),
+                lightsensor=data.get('lightsensor'),
+                battery=data.get('battery'),
+                isInternetOn=data.get('isInternetOn'),
+                isGpsOn=data.get('isGpsOn'),
+                isRingstoneOn=data.get('isRingstoneOn')
+            )
+            db.session.add(new_location)
+            db.session.commit()
+            response_data = {'status': 'success', 'message': 'Location data received successfully'}
+        else:
+            response_data = {'status': 'error', 'message': 'Dementia data not found'}
+            
         return jsonify(response_data)
     
     except Exception as e:
         print(e)
+        response_data = {'status': 'error', 'message': str(e)}
+        return jsonify(response_data), 500
+
+@send_location_info_routes.route('/send-live-location-info', methods=['GET'])
+def send_location_info():
+    try:
+        data = request.json
+        
+        dementia_key = data.get('dementia_key')
+        
+        latest_location = location_info.query.filter_by(dementia_key=dementia_key).order_by(location_info.date.desc()).first()
+        
+        if latest_location:
+            response_data = {
+                'status': 'success',
+                'message': 'Location data sent successfully',
+                'latitude': latest_location.latitude,
+                'longitude': latest_location.longitude,
+                'user_status': latest_location.user_status, # 0: 정지, 1: 도보, 2: 달리기, 3: 차량
+                'accelerationsensor_x': latest_location.accelerationsensor_x,
+                'accelerationsensor_y': latest_location.accelerationsensor_y,
+                'accelerationsensor_z': latest_location.accelerationsensor_z,
+                'gyrosensor_x': latest_location.gyrosensor_x,
+                'gyrosensor_y': latest_location.gyrosensor_y,
+                'gyrosensor_z': latest_location.gyrosensor_z,
+                'directionsensor_x': latest_location.directionsensor_x,
+                'directionsensor_y': latest_location.directionsensor_y,
+                'directionsensor_z': latest_location.directionsensor_z,
+                'lightsensor': latest_location.lightsensor,
+                'battery': latest_location.battery,
+                'isInternetOn': latest_location.isInternetOn,
+                'isGpsOn': latest_location.isGpsOn,
+                'isRingstoneOn': latest_location.isRingstoneOn
+            }
+        else:
+            response_data = {'status': 'error', 'message': 'Location data not found'}
+        
+        return jsonify(response_data)
+    
+    except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), 500
