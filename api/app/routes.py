@@ -1,15 +1,17 @@
 from flask import Blueprint, request, jsonify
 from .models import db, dementia_info, nok_info, location_info
 from .random_generator import RandomNumberGenerator
+from .update_user_status import UpdateUserStatus
 from sqlalchemy import text
+
 
 # 블루프린트 생성
 nok_info_routes = Blueprint('nok_info_routes', __name__)
 dementia_info_routes = Blueprint('dementia_info_routes', __name__)
+is_connected_routes = Blueprint('is_connected_routes', __name__)
 location_info_routes = Blueprint('location_info_routes', __name__)
 send_location_info_routes = Blueprint('send_live_location_info_routes', __name__)
 user_login_routes = Blueprint('user_login_routes', __name__)
-
 
 @nok_info_routes.route('/receive-nok-info', methods=['POST'])
 def receive_nok_info():
@@ -17,9 +19,11 @@ def receive_nok_info():
         nok_data = request.json
         _keyfromdementia = nok_data.get('keyfromdementia')
         rng = RandomNumberGenerator()
+        print(_keyfromdementia)
 
         # 인증번호 중복 여부 확인
         existing_dementia = dementia_info.query.filter_by(dementia_key=_keyfromdementia).first()
+        print(existing_dementia)
         if existing_dementia:
             # 이미 등록된 인증번호에 해당하는 환자 정보가 있을 경우, 해당 환자의 key 값을 가져옴
             for _ in range(10):
@@ -68,6 +72,24 @@ def receive_dementia_info():
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), 500
+
+@is_connected_routes.route('/is-connected', methods=['POST'])
+def is_connected():
+    try:
+        connection_request = request.json
+        _dementia_key = connection_request.get('dementia_key')
+
+        existing_dementia = nok_info.query.filter_by(dementia_info_key=_dementia_key).first()
+        if existing_dementia:
+            response_data = {'status': 'success', 'message': 'Connected successfully'}
+        else:
+            response_data = {'status': 'error', 'message': 'Connection failed'}
+
+        return jsonify(response_data)
+    
+    except Exception as e:
+        response_data = {'status': 'error', 'message': str(e)}
+        return jsonify(response_data), 500
     
 @user_login_routes.route('/receive-user-login', methods=['POST'])
 def receive_user_login():
@@ -107,13 +129,22 @@ def receive_location_info():
         existing_dementia = dementia_info.query.filter_by(dementia_key=_dementia_key).first()
 
         if existing_dementia:
+            # UpdateUserStatus 클래스의 인스턴스 생성
+            user_status_updater = UpdateUserStatus()
+            
+            # 데이터 전처리
+            preprocessed_data = user_status_updater.preprocessing(data)
+
+            # 예측 수행
+            prediction = user_status_updater.predict(preprocessed_data)
+
             new_location = location_info(
                 dementia_key=data.get('dementia_key'),
                 date=data.get('date'),
                 time=data.get('time'),
                 latitude=data.get('latitude'),
                 longitude=data.get('longitude'),
-                user_status=data.get('user_status'), # 0: 정지, 1: 도보, 2: 달리기, 3: 차량
+                user_status=prediction,  # 예측 결과로 업데이트
                 accelerationsensor_x=data.get('accelerationsensor_x'),
                 accelerationsensor_y=data.get('accelerationsensor_y'),
                 accelerationsensor_z=data.get('accelerationsensor_z'),
@@ -129,6 +160,8 @@ def receive_location_info():
                 isGpsOn=data.get('isGpsOn'),
                 isRingstoneOn=data.get('isRingstoneOn')
             )
+
+
             db.session.add(new_location)
             db.session.commit()
             response_data = {'status': 'success', 'message': 'Location data received successfully'}
