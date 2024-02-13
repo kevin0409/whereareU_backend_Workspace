@@ -1,4 +1,5 @@
 from sklearn.tree import DecisionTreeClassifier
+import json
 import pandas as pd
 from io import StringIO
 import pickle
@@ -18,11 +19,35 @@ class UpdateUserStatus:
         prediction = self.model.predict(preprocessed_data)
         return prediction
 
-    # 전처리 함수
     def preprocessing(self, data):
-        # 클라이언트에서 넘어온 데이터를 입력으로 사용
-        # ,로 구분된 한 줄 짜리 데이터
-        data = pd.read_csv(StringIO(data), header=None, names=['시간', 'x1', 'y1', 'z1', 'x2', 'y2', 'z2', 'x3', 'y3', 'z3'])
-        data = data.drop(['시간'], axis=1)
+        
+        #column_names = ['x1', 'y1', 'z1', 'x2', 'y2', 'z2', 'x3', 'y3', 'z3']
+        #df = pd.DataFrame(data, columns=column_names)
 
-        return data
+        #df['x1'] = data.get('accelerometer_x')
+        #df['y1'] = data.get('accelerometer_y')
+        #df['z1'] = data.get('accelerometer_z')
+        #df['x2'] = data.get('gyroscope_x')
+        #df['y2'] = data.get('gyroscope_y')
+        #df['z2'] = data.get('gyroscope_z')
+        #df['x3'] = data.get('magnetometer_x')
+        #df['y3'] = data.get('magnetometer_y')
+        #df['z3'] = data.get('magnetometer_z')
+
+        json_data = json.loads(data)
+
+        processed_data = [{
+            'x1': json_data.get('accelerationsensor_x'),
+            'y1': json_data.get('accelerationsensor_y'),
+            'z1': json_data.get('accelerationsensor_z'),
+            'x2': json_data.get('gyrosensor_x'),
+            'y2': json_data.get('gyrosensor_y'),
+            'z2': json_data.get('gyrosensor_z'),
+            'x3': json_data.get('directionsensor_x'),
+            'y3': json_data.get('directionsensor_y'),
+            'z3': json_data.get('directionsensor_z'),
+        }]
+
+        df = pd.DataFrame(processed_data)
+
+        return df

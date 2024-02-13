@@ -24,7 +24,7 @@ class location_info(db.Model):
     time = db.Column(db.Time)
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
-    user_status = db.Column(db.Integer) # 0: 정지, 1: 도보, 2: 달리기, 3: 차량
+    user_status = db.Column(db.Integer) # 1: 정지, 2: 도보, 3: 차량, 4: 지하철
     accelerationsensor_x = db.Column(db.Float)
     accelerationsensor_y = db.Column(db.Float)
     accelerationsensor_z = db.Column(db.Float)
