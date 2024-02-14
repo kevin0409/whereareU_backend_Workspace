@@ -14,7 +14,6 @@ location_info_routes = Blueprint('location_info_routes', __name__)
 send_location_info_routes = Blueprint('send_live_location_info_routes', __name__)
 user_login_routes = Blueprint('user_login_routes', __name__)
 user_info_modification_routes = Blueprint('user_info_modification_routes', __name__)
-send_dementia_info_routes = Blueprint('send_dementia_info_routes', __name__)
 
 @nok_info_routes.route('/receive-nok-info', methods=['POST'])
 def receive_nok_info():
@@ -30,6 +29,11 @@ def receive_nok_info():
         if existing_dementia:
             print('[system] dementia key found({:s})'.format(_keyfromdementia))
             # 이미 등록된 인증번호에 해당하는 환자 정보가 있을 경우, 해당 환자의 key 값을 가져옴
+            dementia_info_record ={
+                'dementia_key': existing_dementia.dementia_key,
+                'dementia_name': existing_dementia.dementia_name,
+                'dementia_phonenumber': existing_dementia.dementia_phonenumber
+            }
             for _ in range(10):
                 unique_random_number = rng.generate_unique_random_number(100000, 999999)
             
@@ -39,7 +43,7 @@ def receive_nok_info():
             db.session.add(new_user)
             db.session.commit()
             print('[system] {:s} nok info successfully uploaded'.format(nok_data.get('name')))
-            response_data = {'status': 'success', 'message': 'Next of kin data received successfully', 'nok_key' : _key}
+            response_data = {'status': 'success', 'message': 'Next of kin data received successfully', 'nok_key' : _key, 'dementia_info': dementia_info_record}
         else:
             # 인증번호가 등록되지 않은 경우, 오류 전송
             print('[system] dementia key not found')
@@ -85,8 +89,14 @@ def is_connected():
         _dementia_key = connection_request.get('dementia_key')
 
         existing_dementia = nok_info.query.filter_by(dementia_info_key=_dementia_key).first()
-        if existing_dementia:
-            response_data = {'status': 'success', 'message': 'Connected successfully'}
+        
+        if existing_dementia: #조회에 성공한 경우 nok 정보를 가져와 전송
+            nok_info_record = {
+            'nok_key': existing_dementia.nok_key,
+            'nok_name': existing_dementia.nok_name,
+            'nok_phonenumber': existing_dementia.nok_phonenumber
+        }
+            response_data = {'status': 'success', 'message': 'Connected successfully', 'nok_info': nok_info_record}
         else:
             response_data = {'status': 'error', 'message': 'Connection failed'}
 
@@ -124,35 +134,6 @@ def receive_user_login():
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), 500
 
-@send_dementia_info_routes.route('/send-dementia-info', methods=['GET'])
-def send_dementia_info():
-    try:
-        # 클라이언트로부터 dementia_key를 받음
-        request_data = request.json
-        dementia_key = request_data.get('dementia_key')
-
-        # dementia_key와 일치하는 칼럼을 데이터베이스에서 찾음
-        dementia_info_record = dementia_info.query.filter_by(dementia_key=dementia_key).first()
-
-        # 칼럼이 존재하는 경우 해당 정보를 JSON 형식으로 반환
-        if dementia_info_record:
-            dementia_info_json = {
-                'dementia_name': dementia_info_record.dementia_name,
-                'dementia_phonenumber': dementia_info_record.dementia_phonenumber
-            }
-            print('[system] dementia info sent successfully')
-            response_data = {'status': 'success', 'message': 'Dementia info sent successfully', 'dementia_info': dementia_info_json}
-        else:
-            print('[system] dementia info not found')
-            response_data = {'status': 'error', 'message': 'Dementia info not found for the provided key'}
-
-        return jsonify(response_data)
-    
-    except Exception as e:
-        response_data = {'status': 'error', 'message': str(e)}
-        return jsonify(response_data), 500
-
-  
 @location_info_routes.route('/receive-location-info', methods=['POST'])
 def receive_location_info():
     try:
@@ -255,27 +236,27 @@ def modify_user_info():
         data = request.json
 
         is_dementia = data.get('is_dementia')
+        is_name_changed = data.get('is_name_changed')
 
-        if is_dementia == 0:
+        if is_dementia == 0: # 보호자
             existing_nok = nok_info.query.filter_by(nok_key=data.get('key')).first()
             if existing_nok:
-                if data.get('name') is not None:
+                if is_name_changed == 1: # 이름 변경
                     existing_nok.nok_name = data.get('name')
-                if data.get('phone_number') is not None:
+                elif is_name_changed == 0: # 전화번호 변경
                     existing_nok.nok_phonenumber = data.get('phone_number')
-
                 db.session.commit()
                 print('[system] NOK info modified successfully')
                 response_data = {'status': 'success', 'message': 'User info modified successfully'}
             else:
                 print('[system] NOK info not found')
                 response_data = {'status': 'error', 'message': 'User info not found'}
-        elif is_dementia == 1:
+        elif is_dementia == 1: # 보호 대상자
             existing_dementia = dementia_info.query.filter_by(dementia_key=data.get('key')).first()
             if existing_dementia:
-                if data.get('name') is not None:
+                if is_name_changed == 1: # 이름 변경
                     existing_dementia.dementia_name = data.get('name')
-                if data.get('phone_number') is not None:
+                if is_name_changed == 0: # 전화번호 변경
                     existing_dementia.dementia_phonenumber = data.get('phone_number')
 
                 db.session.commit()
