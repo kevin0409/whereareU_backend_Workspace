@@ -15,7 +15,7 @@ def create_app():
 
     db.init_app(app)
 
-    from .routes import nok_info_routes, dementia_info_routes, is_connected_routes, location_info_routes, send_location_info_routes, user_login_routes, user_info_modification_routes
+    from .routes import nok_info_routes, dementia_info_routes, is_connected_routes, location_info_routes, send_location_info_routes, user_login_routes, user_info_modification_routes, caculate_dementia_avarage_walking_speed_routes
     app.register_blueprint(nok_info_routes)
     app.register_blueprint(dementia_info_routes)
     app.register_blueprint(is_connected_routes)
@@ -23,7 +23,8 @@ def create_app():
     app.register_blueprint(send_location_info_routes)
     app.register_blueprint(user_login_routes)
     app.register_blueprint(user_info_modification_routes)
-
+    app.register_blueprint(caculate_dementia_avarage_walking_speed_routes)
+    
     return app
 
 def create_db():

@@ -3,6 +3,7 @@ from .models import db, dementia_info, nok_info, location_info
 from .random_generator import RandomNumberGenerator
 from .update_user_status import UpdateUserStatus
 from sqlalchemy import text
+from sqlalchemy import and_
 import json
 
 
@@ -14,6 +15,7 @@ location_info_routes = Blueprint('location_info_routes', __name__)
 send_location_info_routes = Blueprint('send_live_location_info_routes', __name__)
 user_login_routes = Blueprint('user_login_routes', __name__)
 user_info_modification_routes = Blueprint('user_info_modification_routes', __name__)
+caculate_dementia_avarage_walking_speed_routes = Blueprint('caculate_dementia_avarage_walking_speed', __name__)
 
 @nok_info_routes.route('/receive-nok-info', methods=['POST'])
 def receive_nok_info():
@@ -158,6 +160,7 @@ def receive_location_info():
                 latitude=data.get('latitude'),
                 longitude=data.get('longitude'),
                 user_status=int(prediction[0]),  # 예측 결과로 업데이트
+                current_speed=data.get('current_speed'),
                 accelerationsensor_x=data.get('accelerationsensor_x'),
                 accelerationsensor_y=data.get('accelerationsensor_y'),
                 accelerationsensor_z=data.get('accelerationsensor_z'),
@@ -265,6 +268,35 @@ def modify_user_info():
             else:
                 print('[system] Dementia info not found')
                 response_data = {'status': 'error', 'message': 'User info not found'}
+
+        return jsonify(response_data)
+    
+    except Exception as e:
+        response_data = {'status': 'error', 'message': str(e)}
+        return jsonify(response_data), 500
+
+@caculate_dementia_avarage_walking_speed_routes.route('/caculate-dementia-avarage-walking-speed', methods=['POST'])
+def caculate_dementia_average_walking_speed():
+    try:
+        data = request.json
+        _dementia_key = data.get('dementia_key')
+
+        if _dementia_key is None:
+            return jsonify({'status': 'error', 'message': 'Dementia key is missing'}), 400
+
+        # dementia_key에 해당하는 환자의 최근 10개의 위치 정보를 가져옴
+        location_info_list = location_info.query.filter(and_(location_info.dementia_key == _dementia_key, location_info.user_status == 2)).order_by(location_info.date.desc()).limit(10).all()
+        if location_info_list:
+            # 최근 10개의 위치 정보를 이용하여 평균 속도 계산
+            total_speed = 0
+            for loc_info in location_info_list:  # 루프 변수의 이름을 loc_info로 변경
+                total_speed += loc_info.current_speed
+            average_speed = round(total_speed / len(location_info_list),2)
+            print('[system] {} dementia average walking speed : {}'.format(_dementia_key, average_speed))
+            response_data = {'status': 'success', 'message': 'Average walking speed calculated successfully', 'average_speed': average_speed}
+        else:
+            print('[system] {} dementia info not found'.format(_dementia_key))
+            response_data = {'status': 'error', 'message': 'Location data not found'}
 
         return jsonify(response_data)
     
