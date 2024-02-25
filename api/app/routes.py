@@ -21,7 +21,7 @@ caculate_dementia_avarage_walking_speed_routes = Blueprint('caculate_dementia_av
 def receive_nok_info():
     try:
         nok_data = request.json
-        _keyfromdementia = nok_data.get('keyfromdementia')
+        _keyfromdementia = nok_data.get('keyFromDementia')
         rng = RandomNumberGenerator()
         print(_keyfromdementia)
 
@@ -32,20 +32,20 @@ def receive_nok_info():
             print('[system] dementia key found({:s})'.format(_keyfromdementia))
             # 이미 등록된 인증번호에 해당하는 환자 정보가 있을 경우, 해당 환자의 key 값을 가져옴
             dementia_info_record ={
-                'dementia_key': existing_dementia.dementia_key,
-                'dementia_name': existing_dementia.dementia_name,
-                'dementia_phonenumber': existing_dementia.dementia_phonenumber
+                'dementiaKey': existing_dementia.dementia_key,
+                'dementiaName': existing_dementia.dementia_name,
+                'dementiaPhonenumber': existing_dementia.dementia_phonenumber
             }
             for _ in range(10):
                 unique_random_number = rng.generate_unique_random_number(100000, 999999)
             
             _key = str(unique_random_number)  # 키 값을 문자열로 변환
             print('[system] nok_key({:s})', _key)
-            new_user = nok_info(nok_key=_key, nok_name=nok_data.get('name'), nok_phonenumber=nok_data.get('phone_number'), dementia_info_key = _keyfromdementia)
+            new_user = nok_info(nok_key=_key, nok_name=nok_data.get('name'), nok_phonenumber=nok_data.get('phoneNumber'), dementia_info_key = _keyfromdementia)
             db.session.add(new_user)
             db.session.commit()
             print('[system] {:s} nok info successfully uploaded'.format(nok_data.get('name')))
-            response_data = {'status': 'success', 'message': 'Next of kin data received successfully', 'nok_key' : _key, 'dementia_info': dementia_info_record}
+            response_data = {'status': 'success', 'message': 'Next of kin data received successfully', 'nokKey' : _key, 'dementiaInfo': dementia_info_record}
         else:
             # 인증번호가 등록되지 않은 경우, 오류 전송
             print('[system] dementia key not found')
@@ -71,13 +71,13 @@ def receive_dementia_info():
         _dementia_key = str(unique_random_numberfordementia)  # 키 값을 문자열로 변환
     
         _dementia_name = dementia_data.get('name')
-        _dementia_phonenumber = dementia_data.get('phone_number')
+        _dementia_phonenumber = dementia_data.get('phoneNumber')
 
         new_user = dementia_info(dementia_key=_dementia_key, dementia_name = _dementia_name, dementia_phonenumber=_dementia_phonenumber)
         db.session.add(new_user)
         db.session.commit()
         print('[system] {:s} dementia info successfully uploaded'.format(_dementia_name))
-        response_data = {'status': 'success', 'message': 'Dementia paitient data received successfully', 'dementia_key': _dementia_key}
+        response_data = {'status': 'success', 'message': 'Dementia paitient data received successfully', 'dementiaKey': _dementia_key}
         return jsonify(response_data)
     
     except Exception as e:
@@ -88,17 +88,17 @@ def receive_dementia_info():
 def is_connected():
     try:
         connection_request = request.json
-        _dementia_key = connection_request.get('dementia_key')
+        _dementia_key = connection_request.get('dementiaKey')
 
         existing_dementia = nok_info.query.filter_by(dementia_info_key=_dementia_key).first()
         
         if existing_dementia: #조회에 성공한 경우 nok 정보를 가져와 전송
             nok_info_record = {
-            'nok_key': existing_dementia.nok_key,
-            'nok_name': existing_dementia.nok_name,
-            'nok_phonenumber': existing_dementia.nok_phonenumber
+            'nokKey': existing_dementia.nok_key,
+            'nokName': existing_dementia.nok_name,
+            'nokPhonenumber': existing_dementia.nok_phonenumber
         }
-            response_data = {'status': 'success', 'message': 'Connected successfully', 'nok_info': nok_info_record}
+            response_data = {'status': 'success', 'message': 'Connected successfully', 'nokInfo': nok_info_record}
         else:
             response_data = {'status': 'error', 'message': 'Connection failed'}
 
@@ -115,7 +115,7 @@ def receive_user_login():
         data = request.json
         
         _key = data.get('key')
-        _isdementia = data.get('isdementia') # 0: NOK, 1: dementia
+        _isdementia = data.get('isDementia') # 0: NOK, 1: dementia
 
         if _isdementia == 0: # nok일 경우
             existing_nok = nok_info.query.filter_by(nok_key=_key).first()
@@ -142,7 +142,7 @@ def receive_location_info():
         data = request.json
         json_data = json.dumps(data)
         
-        _dementia_key = data.get('dementia_key')
+        _dementia_key = data.get('dementiaKey')
         
         existing_dementia = dementia_info.query.filter_by(dementia_key=_dementia_key).first()
 
@@ -154,22 +154,21 @@ def receive_location_info():
             prediction = user_status_updater.predict(json_data)
 
             new_location = location_info(
-                dementia_key=data.get('dementia_key'),
+                dementia_key=data.get('dementiaKey'),
                 date=data.get('date'),
                 time=data.get('time'),
                 latitude=data.get('latitude'),
                 longitude=data.get('longitude'),
                 user_status=int(prediction[0]),  # 예측 결과로 업데이트
-                current_speed=data.get('current_speed'),
-                accelerationsensor_x=data.get('accelerationsensor_x'),
-                accelerationsensor_y=data.get('accelerationsensor_y'),
-                accelerationsensor_z=data.get('accelerationsensor_z'),
-                gyrosensor_x=data.get('gyrosensor_x'),
-                gyrosensor_y=data.get('gyrosensor_y'),
-                gyrosensor_z=data.get('gyrosensor_z'),
-                directionsensor_x=data.get('directionsensor_x'),
-                directionsensor_y=data.get('directionsensor_y'),
-                directionsensor_z=data.get('directionsensor_z'),
+                accelerationsensor_x=data.get('accelerationsensorX'),
+                accelerationsensor_y=data.get('accelerationsensorY'),
+                accelerationsensor_z=data.get('accelerationsensorZ'),
+                gyrosensor_x=data.get('gyrosensorX'),
+                gyrosensor_y=data.get('gyrosensorY'),
+                gyrosensor_z=data.get('gyrosensorZ'),
+                directionsensor_x=data.get('directionsensorX'),
+                directionsensor_y=data.get('directionsensorY'),
+                directionsensor_z=data.get('directionsensorZ'),
                 lightsensor=data.get('lightsensor'),
                 battery=data.get('battery'),
                 isInternetOn=data.get('isInternetOn'),
@@ -197,7 +196,7 @@ def send_location_info():
     try:
         data = request.json
         
-        dementia_key = data.get('dementia_key')
+        dementia_key = data.get('dementiaKey')
         
         latest_location = location_info.query.filter_by(dementia_key=dementia_key).order_by(location_info.date.desc()).first()
         
@@ -207,16 +206,16 @@ def send_location_info():
                 'message': 'Location data sent successfully',
                 'latitude': latest_location.latitude,
                 'longitude': latest_location.longitude,
-                'user_status': latest_location.user_status, # 1: 정지, 2: 도보, 3: 차량, 4: 지하철
-                'accelerationsensor_x': latest_location.accelerationsensor_x,
-                'accelerationsensor_y': latest_location.accelerationsensor_y,
-                'accelerationsensor_z': latest_location.accelerationsensor_z,
-                'gyrosensor_x': latest_location.gyrosensor_x,
-                'gyrosensor_y': latest_location.gyrosensor_y,
-                'gyrosensor_z': latest_location.gyrosensor_z,
-                'directionsensor_x': latest_location.directionsensor_x,
-                'directionsensor_y': latest_location.directionsensor_y,
-                'directionsensor_z': latest_location.directionsensor_z,
+                'userStatus': latest_location.user_status, # 1: 정지, 2: 도보, 3: 차량, 4: 지하철
+                'accelerationsensorX': latest_location.accelerationsensor_x,
+                'accelerationsensorY': latest_location.accelerationsensor_y,
+                'accelerationsensorZ': latest_location.accelerationsensor_z,
+                'gyrosensorX': latest_location.gyrosensor_x,
+                'gyrosensorY': latest_location.gyrosensor_y,
+                'gyrosensorZ': latest_location.gyrosensor_z,
+                'directionsensorX': latest_location.directionsensor_x,
+                'directionsensorY': latest_location.directionsensor_y,
+                'directionsensorZ': latest_location.directionsensor_z,
                 'lightsensor': latest_location.lightsensor,
                 'battery': latest_location.battery,
                 'isInternetOn': latest_location.isInternetOn,
@@ -238,8 +237,8 @@ def modify_user_info():
         response_data = {}
         data = request.json
 
-        is_dementia = data.get('is_dementia')
-        is_name_changed = data.get('is_name_changed')
+        is_dementia = data.get('isDementia')
+        is_name_changed = data.get('isNameChanged')
 
         if is_dementia == 0: # 보호자
             existing_nok = nok_info.query.filter_by(nok_key=data.get('key')).first()
@@ -247,7 +246,7 @@ def modify_user_info():
                 if is_name_changed == 1: # 이름 변경
                     existing_nok.nok_name = data.get('name')
                 elif is_name_changed == 0: # 전화번호 변경
-                    existing_nok.nok_phonenumber = data.get('phone_number')
+                    existing_nok.nok_phonenumber = data.get('phoneNumber')
                 db.session.commit()
                 print('[system] NOK info modified successfully')
                 response_data = {'status': 'success', 'message': 'User info modified successfully'}
@@ -260,7 +259,7 @@ def modify_user_info():
                 if is_name_changed == 1: # 이름 변경
                     existing_dementia.dementia_name = data.get('name')
                 if is_name_changed == 0: # 전화번호 변경
-                    existing_dementia.dementia_phonenumber = data.get('phone_number')
+                    existing_dementia.dementia_phonenumber = data.get('phoneNumber')
 
                 db.session.commit()
                 print('[system] Dementia info modified successfully')
@@ -279,7 +278,7 @@ def modify_user_info():
 def caculate_dementia_average_walking_speed():
     try:
         data = request.json
-        _dementia_key = data.get('dementia_key')
+        _dementia_key = data.get('dementiaKey')
 
         if _dementia_key is None:
             return jsonify({'status': 'error', 'message': 'Dementia key is missing'}), 400
@@ -293,7 +292,7 @@ def caculate_dementia_average_walking_speed():
                 total_speed += loc_info.current_speed
             average_speed = round(total_speed / len(location_info_list),2)
             print('[system] {} dementia average walking speed : {}'.format(_dementia_key, average_speed))
-            response_data = {'status': 'success', 'message': 'Average walking speed calculated successfully', 'average_speed': average_speed}
+            response_data = {'status': 'success', 'message': 'Average walking speed calculated successfully', 'averageSpeed': average_speed}
         else:
             print('[system] {} dementia info not found'.format(_dementia_key))
             response_data = {'status': 'error', 'message': 'Location data not found'}

@@ -37,15 +37,15 @@ class UpdateUserStatus:
         json_data = json.loads(data)
 
         processed_data = [{
-            'x1': json_data.get('accelerationsensor_x'),
-            'y1': json_data.get('accelerationsensor_y'),
-            'z1': json_data.get('accelerationsensor_z'),
-            'x2': json_data.get('gyrosensor_x'),
-            'y2': json_data.get('gyrosensor_y'),
-            'z2': json_data.get('gyrosensor_z'),
-            'x3': json_data.get('directionsensor_x'),
-            'y3': json_data.get('directionsensor_y'),
-            'z3': json_data.get('directionsensor_z'),
+            'x1': json_data.get('accelerationsensorX'),
+            'y1': json_data.get('accelerationsensorY'),
+            'z1': json_data.get('accelerationsensorZ'),
+            'x2': json_data.get('gyrosensorX'),
+            'y2': json_data.get('gyrosensorY'),
+            'z2': json_data.get('gyrosensorZ'),
+            'x3': json_data.get('directionsensorX'),
+            'y3': json_data.get('directionsensorY'),
+            'z3': json_data.get('directionsensorZ'),
         }]
 
         df = pd.DataFrame(processed_data)

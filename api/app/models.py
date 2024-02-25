@@ -22,8 +22,8 @@ class location_info(db.Model):
     dementia_key = db.Column(db.String(20))
     date = db.Column(db.Date)
     time = db.Column(db.Time)
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
+    latitude = db.Column(db.Double)
+    longitude = db.Column(db.Double)
     user_status = db.Column(db.Integer) # 1: 정지, 2: 도보, 3: 차량, 4: 지하철
     current_speed = db.Column(db.Float)
     accelerationsensor_x = db.Column(db.Float)
