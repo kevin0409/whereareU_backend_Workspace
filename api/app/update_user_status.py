@@ -20,32 +20,23 @@ class UpdateUserStatus:
         return prediction
 
     def preprocessing(self, data):
-        
-        #column_names = ['x1', 'y1', 'z1', 'x2', 'y2', 'z2', 'x3', 'y3', 'z3']
-        #df = pd.DataFrame(data, columns=column_names)
-
-        #df['x1'] = data.get('accelerometer_x')
-        #df['y1'] = data.get('accelerometer_y')
-        #df['z1'] = data.get('accelerometer_z')
-        #df['x2'] = data.get('gyroscope_x')
-        #df['y2'] = data.get('gyroscope_y')
-        #df['z2'] = data.get('gyroscope_z')
-        #df['x3'] = data.get('magnetometer_x')
-        #df['y3'] = data.get('magnetometer_y')
-        #df['z3'] = data.get('magnetometer_z')
 
         json_data = json.loads(data)
 
+        accel = json_data.get('accelerationsensor')
+        gyro = json_data.get('gyrosensor')
+        direction = json_data.get('directionsensor')
+
         processed_data = [{
-            'x1': json_data.get('accelerationsensorX'),
-            'y1': json_data.get('accelerationsensorY'),
-            'z1': json_data.get('accelerationsensorZ'),
-            'x2': json_data.get('gyrosensorX'),
-            'y2': json_data.get('gyrosensorY'),
-            'z2': json_data.get('gyrosensorZ'),
-            'x3': json_data.get('directionsensorX'),
-            'y3': json_data.get('directionsensorY'),
-            'z3': json_data.get('directionsensorZ'),
+            'x1': accel[0],
+            'y1': accel[1],
+            'z1': accel[2],
+            'x2': gyro[0],
+            'y2': gyro[1],
+            'z2': gyro[2],
+            'x3': direction[0],
+            'y3': direction[1],
+            'z3': direction[2],
         }]
 
         df = pd.DataFrame(processed_data)

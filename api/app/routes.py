@@ -216,6 +216,11 @@ def receive_location_info():
             # UpdateUserStatus 클래스의 인스턴스 생성
             user_status_updater = UpdateUserStatus()
 
+            accelerationsensor = data.get('accelerationsensor')
+            gyrosensor = data.get('gyrosensor')
+            directionsensor = data.get('directionsensor')
+            lightsensor = data.get('lightsensor')
+
             # 예측 수행
             prediction = user_status_updater.predict(json_data)
 
@@ -226,16 +231,16 @@ def receive_location_info():
                 latitude=data.get('latitude'),
                 longitude=data.get('longitude'),
                 user_status=int(prediction[0]),  # 예측 결과로 업데이트
-                accelerationsensor_x=data.get('accelerationsensorX'),
-                accelerationsensor_y=data.get('accelerationsensorY'),
-                accelerationsensor_z=data.get('accelerationsensorZ'),
-                gyrosensor_x=data.get('gyrosensorX'),
-                gyrosensor_y=data.get('gyrosensorY'),
-                gyrosensor_z=data.get('gyrosensorZ'),
-                directionsensor_x=data.get('directionsensorX'),
-                directionsensor_y=data.get('directionsensorY'),
-                directionsensor_z=data.get('directionsensorZ'),
-                lightsensor=data.get('lightsensor'),
+                accelerationsensor_x=accelerationsensor[0],
+                accelerationsensor_y=accelerationsensor[1],
+                accelerationsensor_z=accelerationsensor[2],
+                gyrosensor_x=gyrosensor[0],
+                gyrosensor_y=gyrosensor[1],
+                gyrosensor_z=gyrosensor[2],
+                directionsensor_x=directionsensor[0],
+                directionsensor_y=directionsensor[1],
+                directionsensor_z=directionsensor[2],
+                lightsensor=lightsensor[0],
                 battery=data.get('battery'),
                 isInternetOn=data.get('isInternetOn'),
                 isGpsOn=data.get('isGpsOn'),
@@ -276,16 +281,22 @@ def send_location_info():
                 'latitude': latest_location.latitude,
                 'longitude': latest_location.longitude,
                 'userStatus': latest_location.user_status, # 1: 정지, 2: 도보, 3: 차량, 4: 지하철
-                'accelerationsensorX': latest_location.accelerationsensor_x,
-                'accelerationsensorY': latest_location.accelerationsensor_y,
-                'accelerationsensorZ': latest_location.accelerationsensor_z,
-                'gyrosensorX': latest_location.gyrosensor_x,
-                'gyrosensorY': latest_location.gyrosensor_y,
-                'gyrosensorZ': latest_location.gyrosensor_z,
-                'directionsensorX': latest_location.directionsensor_x,
-                'directionsensorY': latest_location.directionsensor_y,
-                'directionsensorZ': latest_location.directionsensor_z,
-                'lightsensor': latest_location.lightsensor,
+                #'accelerationsensor' : {
+                #    'x': latest_location.accelerationsensor_x,
+                #    'y': latest_location.accelerationsensor_y,
+                #    'z': latest_location.accelerationsensor_z
+                #},
+                #'gyrosensor': {
+                #    'x': latest_location.gyrosensor_x,
+                #    'y': latest_location.gyrosensor_y,
+                #    'z': latest_location.gyrosensor_z
+                #},
+                #'directionsensor': {
+                #    'x': latest_location.directionsensor_x,
+                #    'y': latest_location.directionsensor_y,
+                #    'z': latest_location.directionsensor_z
+                #},
+                #'lightsensor': latest_location.lightsensor,
                 'battery': latest_location.battery,
                 'isInternetOn': latest_location.isInternetOn,
                 'isGpsOn': latest_location.isGpsOn,
