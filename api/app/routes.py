@@ -20,6 +20,7 @@ caculate_dementia_avarage_walking_speed_routes = Blueprint('caculate_dementia_av
 # 상태코드 정의
 SUCCESS = 200
 KEYNOTFOUND = 600
+LOCDATANOTFOUND = 650
 LOGINSUCCESS = 700
 LOGINFAILED = 750
 UNDEFERR = 500
@@ -230,6 +231,7 @@ def receive_location_info():
                 time=data.get('time'),
                 latitude=data.get('latitude'),
                 longitude=data.get('longitude'),
+                bearing = data.get('bearing'),
                 user_status=int(prediction[0]),  # 예측 결과로 업데이트
                 accelerationsensor_x=accelerationsensor[0],
                 accelerationsensor_y=accelerationsensor[1],
@@ -244,7 +246,8 @@ def receive_location_info():
                 battery=data.get('battery'),
                 isInternetOn=data.get('isInternetOn'),
                 isGpsOn=data.get('isGpsOn'),
-                isRingstoneOn=data.get('isRingstoneOn')
+                isRingstoneOn=data.get('isRingstoneOn'),
+                current_speed = data.get('currentSpeed')
             )
 
             print(int(prediction[0]))
@@ -256,7 +259,7 @@ def receive_location_info():
             return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
         
         else:
-            response_data = {'status': 'error', 'message': 'Dementia info not found'}
+            response_data = {'status': 'error', 'message': 'Certification number not found'}
 
             return jsonify(response_data), KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
     
@@ -268,11 +271,11 @@ def receive_location_info():
 @send_location_info_routes.route('/send-live-location-info', methods=['GET'])
 def send_location_info():
     try:
-        data = request.json
         
-        dementia_key = data.get('dementiaKey')
+        dementia_key = request.args.get('dementiaKey')
         
-        latest_location = location_info.query.filter_by(dementia_key=dementia_key).order_by(location_info.date.desc()).first()
+        latest_location = location_info.query.filter_by(dementia_key=dementia_key).order_by(location_info.date.desc(), location_info.time.desc()).first()
+
         
         if latest_location:
             result = {
@@ -280,33 +283,19 @@ def send_location_info():
                 'message': 'Location data sent successfully',
                 'latitude': latest_location.latitude,
                 'longitude': latest_location.longitude,
+                'bearing': latest_location.bearing,
+                'currentSpeed': latest_location.current_speed,
                 'userStatus': latest_location.user_status, # 1: 정지, 2: 도보, 3: 차량, 4: 지하철
-                #'accelerationsensor' : {
-                #    'x': latest_location.accelerationsensor_x,
-                #    'y': latest_location.accelerationsensor_y,
-                #    'z': latest_location.accelerationsensor_z
-                #},
-                #'gyrosensor': {
-                #    'x': latest_location.gyrosensor_x,
-                #    'y': latest_location.gyrosensor_y,
-                #    'z': latest_location.gyrosensor_z
-                #},
-                #'directionsensor': {
-                #    'x': latest_location.directionsensor_x,
-                #    'y': latest_location.directionsensor_y,
-                #    'z': latest_location.directionsensor_z
-                #},
-                #'lightsensor': latest_location.lightsensor,
                 'battery': latest_location.battery,
                 'isInternetOn': latest_location.isInternetOn,
                 'isGpsOn': latest_location.isGpsOn,
-                'isRingstoneOn': latest_location.isRingstoneOn
+                'isRingstoneOn': latest_location.isRingstoneOn # 0 : 무음, 1 : 진동, 2 : 벨소리
             }
             response_data = {'status': 'success', 'message': 'Location data sent successfully', 'result': result}
 
             return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
         else:
-            response_data = {'status': 'error', 'message': 'Location data not found'}
+            response_data = {'status': 'error', 'message': 'Certification number not found'}
 
             return jsonify(response_data), KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
     
@@ -373,7 +362,7 @@ def caculate_dementia_average_walking_speed():
         _dementia_key = data.get('dementiaKey')
 
         if _dementia_key is None:
-            return jsonify({'status': 'error', 'message': 'Dementia key is missing'}), DUPERR
+            return jsonify({'status': 'error', 'message': 'Certification number not found'}), KEYNOTFOUND
 
         # dementia_key에 해당하는 환자의 최근 10개의 위치 정보를 가져옴
         location_info_list = location_info.query.filter(and_(location_info.dementia_key == _dementia_key, location_info.user_status == 2)).order_by(location_info.date.desc()).limit(10).all()
@@ -385,11 +374,13 @@ def caculate_dementia_average_walking_speed():
             average_speed = round(total_speed / len(location_info_list),2)
             print('[system] {} dementia average walking speed : {}'.format(_dementia_key, average_speed))
             response_data = {'status': 'success', 'message': 'Average walking speed calculated successfully', 'averageSpeed': average_speed}
+
+            return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
         else:
             print('[system] {} dementia info not found'.format(_dementia_key))
             response_data = {'status': 'error', 'message': 'Location data not found'}
 
-        return jsonify(response_data)
+            return jsonify(response_data), LOCDATANOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
     
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}

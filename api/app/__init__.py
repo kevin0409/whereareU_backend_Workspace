@@ -24,7 +24,7 @@ def create_app():
     app.register_blueprint(user_login_routes)
     app.register_blueprint(user_info_modification_routes)
     app.register_blueprint(caculate_dementia_avarage_walking_speed_routes)
-    
+
     return app
 
 def create_db():
