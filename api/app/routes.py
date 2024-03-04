@@ -74,17 +74,23 @@ def receive_nok_info():
             
             print('[system] {:s} nok info successfully uploaded'.format(nok_data.get('name')))
 
-            response_data = {'status': 'success', 'message': 'Next of kin data received successfully', 'result': result}
+            response_data = {'status': 'success', 'message': 'Next of kin data received successfully', 'result': result}\
+            
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
 
-            return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+            return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
         
         else:
             # 인증번호가 등록되지 않은 경우, 오류 전송
             print('[system] dementia key not found')
 
             response_data = {'status': 'error', 'message': 'Certification number not found'}
+
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
             
-            return jsonify(response_data), KEYNOTFOUND , {'Content-Type': 'application/json; charset = utf-8' }
+            return json_response, KEYNOTFOUND , {'Content-Type': 'application/json; charset = utf-8' }
 
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
@@ -130,7 +136,10 @@ def receive_dementia_info():
             response_data = {'status': 'success', 'message': 'Dementia paitient data received successfully', 'result': result}
 
             
-        return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+        json_response = jsonify(response_data)
+        json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+        
+        return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
     
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
@@ -154,12 +163,18 @@ def is_connected():
             }
             response_data = {'status': 'success', 'message': 'Connected successfully', 'result' : result}
 
-            return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+            return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
 
         else:
             response_data = {'status': 'error', 'message': 'Connection failed'}
 
-        return jsonify(response_data), KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+            return json_response, KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
     
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
@@ -179,12 +194,18 @@ def receive_user_login():
             if existing_nok:
                 response_data = {'status': 'success', 'message': 'Login success'}
 
-                return jsonify(response_data), LOGINSUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+                json_response = jsonify(response_data)
+                json_response = json_response.headers.add('Content-Length', str(len(json_response.response)))
+
+                return json_response, LOGINSUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
 
             else:
                 response_data = {'status': 'error', 'message': 'Login failed'}
 
-                return jsonify(response_data), LOGINFAILED, {'Content-Type': 'application/json; charset = utf-8' }
+                json_response = jsonify(response_data)
+                json_response = json_response.headers.add('Content-Length', str(len(json_response.response)))
+
+                return json_response, LOGINFAILED, {'Content-Type': 'application/json; charset = utf-8' }
 
             
         elif _isdementia == 1: # dementia일 경우
@@ -192,12 +213,18 @@ def receive_user_login():
             if existing_dementia:
                 response_data = {'status': 'success', 'message': 'Login success'}
 
-                return jsonify(response_data), LOGINSUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+                json_response = jsonify(response_data)
+                json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+                return json_response, LOGINSUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
 
             else:
                 response_data = {'status': 'error', 'message': 'Login failed'}
 
-                return jsonify(response_data), LOGINFAILED, {'Content-Type': 'application/json; charset = utf-8' }
+                json_response = jsonify(response_data)
+                json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+                return json_response, LOGINFAILED, {'Content-Type': 'application/json; charset = utf-8' }
     
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
@@ -256,12 +283,18 @@ def receive_location_info():
             db.session.commit()
             response_data = {'status': 'success', 'message': 'Location data received successfully'}
 
-            return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+            return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
         
         else:
             response_data = {'status': 'error', 'message': 'Certification number not found'}
 
-            return jsonify(response_data), KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+            return json_response, KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
     
     except Exception as e:
         print(e)
@@ -293,11 +326,17 @@ def send_location_info():
             }
             response_data = {'status': 'success', 'message': 'Location data sent successfully', 'result': result}
 
-            return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+            return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
         else:
             response_data = {'status': 'error', 'message': 'Certification number not found'}
 
-            return jsonify(response_data), KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+            return json_response, KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
     
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
@@ -323,13 +362,19 @@ def modify_user_info():
                 print('[system] NOK info modified successfully')
                 response_data = {'status': 'success', 'message': 'User info modified successfully'}
 
-                return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+                json_response = jsonify(response_data)
+                json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+                return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
             
             else:
                 print('[system] NOK info not found')
                 response_data = {'status': 'error', 'message': 'User info not found'}
 
-                return jsonify(response_data), KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+                json_response = jsonify(response_data)
+                json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+                return json_response, KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
             
         elif is_dementia == 1: # 보호 대상자
             existing_dementia = dementia_info.query.filter_by(dementia_key=data.get('key')).first()
@@ -343,13 +388,19 @@ def modify_user_info():
                 print('[system] Dementia info modified successfully')
                 response_data = {'status': 'success', 'message': 'User info modified successfully'}
 
-                return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+                json_response = jsonify(response_data)
+                json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+                return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
             
             else:
                 print('[system] Dementia info not found')
                 response_data = {'status': 'error', 'message': 'User info not found'}
 
-                return jsonify(response_data), KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+                json_response = jsonify(response_data)
+                json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+                return json_response, KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
     
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
