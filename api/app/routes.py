@@ -16,6 +16,7 @@ send_location_info_routes = Blueprint('send_live_location_info_routes', __name__
 user_login_routes = Blueprint('user_login_routes', __name__)
 user_info_modification_routes = Blueprint('user_info_modification_routes', __name__)
 caculate_dementia_avarage_walking_speed_routes = Blueprint('caculate_dementia_avarage_walking_speed', __name__)
+send_meaningful_location_info_routes = Blueprint('send_meaningful_location_info', __name__)
 
 # 상태코드 정의
 SUCCESS = 200
@@ -281,7 +282,7 @@ def receive_location_info():
 
             db.session.add(new_location)
             db.session.commit()
-            response_data = {'status': 'success', 'message': 'Location data received successfully'}
+            response_data = {'status': 'success', 'message': 'Location data received successfully', 'result' : int(prediction[0])} # 임의로 예측 결과를 전송
 
             json_response = jsonify(response_data)
             json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
@@ -436,3 +437,16 @@ def caculate_dementia_average_walking_speed():
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), UNDEFERR
+
+@send_meaningful_location_info_routes.route('/send-meaningful-location-info', methods=['GET'])
+def send_meaningful_location_info():
+    try:
+        data = request.args.get('dementiaKey')
+
+        
+
+    except Exception as e:
+
+        response_data = {'status': 'error', 'message': str(e)}
+
+        return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' }
