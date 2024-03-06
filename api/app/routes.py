@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from .models import db, dementia_info, nok_info, location_info
 from .random_generator import RandomNumberGenerator
 from .update_user_status import UpdateUserStatus
+from .LocationAnalyzer import LocationAnalyzer
+from datetime import datetime
 from sqlalchemy import and_
 import json
 
@@ -443,10 +445,36 @@ def send_meaningful_location_info():
     try:
         data = request.args.get('dementiaKey')
 
-        
+        today = datetime.now().date()
 
+        # 해당일에 저장된 위치 정보를 모두 가져옴
+        location_list = location_info.query.filter(and_(location_info.dementia_key == data, location_info.date == today)).order_by(location_info.date.desc(), location_info.time.desc()).all()
+
+        if location_list:
+            
+            filename = f'location_data_for_dementia_key_{data}.txt'
+            with open(filename, 'w') as file:
+                for location in location_list:
+                    file.write(f'{location.latitude}, {location.longitude}, {location.date}, {location.time}\n')
+
+            
+            LA = LocationAnalyzer(filename)
+
+            predict_meaningful_location_data = LA.gmeansFunc()
+
+
+ 
+
+        elif :
+
+            response_data = {'status': 'error', 'message': 'Location data not found'}
+
+            json_response = jsonify(response_data)
+
+            return json_response, LOCDATANOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+        
     except Exception as e:
 
         response_data = {'status': 'error', 'message': str(e)}
 
-        return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' }
+        return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' 
