@@ -1,7 +1,5 @@
-from sklearn.tree import DecisionTreeClassifier
 import json
 import pandas as pd
-from io import StringIO
 import pickle
 
 class UpdateUserStatus:
