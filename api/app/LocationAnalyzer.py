@@ -77,14 +77,3 @@ class LocationAnalyzer:
         result = dataDf.centers.values.tolist()
 
         return result
-
-if __name__ == '__main__':
-    # 파일 경로 가져오기
-    # 지금은 데이터가 저장된 파일의 경로를 실행할 때 입력
-    filePath = sys.argv[1]
-    la = LocationAnalyzer(filePath)
-
-    data = la.gmeansFunc()
-    
-    print(data)
-    

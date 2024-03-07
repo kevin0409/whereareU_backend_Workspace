@@ -24,6 +24,7 @@ send_meaningful_location_info_routes = Blueprint('send_meaningful_location_info'
 SUCCESS = 200
 KEYNOTFOUND = 600
 LOCDATANOTFOUND = 650
+LOCDATANOTENOUGH = 660
 LOGINSUCCESS = 700
 LOGINFAILED = 750
 UNDEFERR = 500
@@ -448,7 +449,8 @@ def send_meaningful_location_info():
         today = datetime.now().date()
 
         # 해당일에 저장된 위치 정보를 모두 가져옴
-        location_list = location_info.query.filter(and_(location_info.dementia_key == data, location_info.date == today)).order_by(location_info.date.desc(), location_info.time.desc()).all()
+        #location_list = location_info.query.filter(and_(location_info.dementia_key == data, location_info.date == today)).order_by(location_info.date.desc(), location_info.time.desc()).all()
+        location_list = location_info.query.filter_by(dementia_key = data).order_by(location_info.date.desc(), location_info.time.desc()).all()
 
         if location_list:
             
@@ -462,19 +464,28 @@ def send_meaningful_location_info():
 
             predict_meaningful_location_data = LA.gmeansFunc()
 
+            response_data = {'status': 'success', 'message': 'Meaningful location data sent successfully', 'result': predict_meaningful_location_data}
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
 
- 
 
-        elif :
+            return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
 
-            response_data = {'status': 'error', 'message': 'Location data not found'}
+        elif len(location_list) <= 10:
+
+            response_data = {'status': 'error', 'message': 'Location data not enough'}
 
             json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
 
-            return json_response, LOCDATANOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+            return json_response, LOCDATANOTENOUGH, {'Content-Type': 'application/json; charset = utf-8' }
+        
+        else:
+            # 예외 처리 코드
+            print("location_list가 비어 있습니다.")
         
     except Exception as e:
 
         response_data = {'status': 'error', 'message': str(e)}
 
-        return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' 
+        return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' }
