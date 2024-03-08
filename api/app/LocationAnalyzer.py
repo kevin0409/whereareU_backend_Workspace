@@ -1,7 +1,5 @@
 import numpy as np
 import pandas as pd
-import os
-import sys
 from pyclustering.cluster.gmeans import gmeans
 
 class LocationAnalyzer:
