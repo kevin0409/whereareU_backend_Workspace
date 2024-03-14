@@ -1,5 +1,4 @@
 from . import db
-from geoalchemy2 import Geometry
 
 class nok_info(db.Model):
     num = db.Column(db.Integer, primary_key=True, autoincrement=True)

@@ -22,13 +22,15 @@ class LocationAnalyzer:
 
         # 데이터에 불필요한 부분 제거
         # 추후 데이터 형식에 따라 수정 필요 *
-        data = data.split('\n')[6:-1]
-        for i in range(len(data)):
+        data = data.split('\n')
+        for i in range(len(data)-1):
             line = data[i].split(',')
             latitude.append(line[0])    # 위도
             longitude.append(line[1])   # 경도
-            date.append(line[5])        # 날짜
-            time.append(line[6])        # 시간
+            date.append(line[2])        # 날짜
+            time.append(line[3])        # 시간
+
+        print(len(data)-1)
 
         df = pd.DataFrame({"latitude":latitude, "longitude":longitude, "date":date, "time":time})
 

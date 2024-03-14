@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify
-from .models import db, dementia_info, nok_info, location_info
+from .models import db, dementia_info, nok_info, location_info, meaningful_location_info
 from .random_generator import RandomNumberGenerator
 from .update_user_status import UpdateUserStatus
+from sqlalchemy import and_
 from .LocationAnalyzer import LocationAnalyzer
 from datetime import datetime
-from sqlalchemy import and_
+from flask import Blueprint
 import json
 
 
@@ -18,7 +19,7 @@ send_location_info_routes = Blueprint('send_live_location_info_routes', __name__
 user_login_routes = Blueprint('user_login_routes', __name__)
 user_info_modification_routes = Blueprint('user_info_modification_routes', __name__)
 caculate_dementia_avarage_walking_speed_routes = Blueprint('caculate_dementia_avarage_walking_speed', __name__)
-send_meaningful_location_info_routes = Blueprint('send_meaningful_location_info', __name__)
+analye_schedule = Blueprint('analye_schedule', __name__)
 
 # 상태코드 정의
 SUCCESS = 200
@@ -440,52 +441,54 @@ def caculate_dementia_average_walking_speed():
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), UNDEFERR
-
-@send_meaningful_location_info_routes.route('/send-meaningful-location-info', methods=['GET'])
-def send_meaningful_location_info():
+    
+@analye_schedule.route('/analyze_meaningful_location')
+def analyze_meaningful_location():
     try:
-        data = request.args.get('dementiaKey')
-
         today = datetime.now().date()
+        #날짜를 문자열로 변환
+        today = today.strftime('%Y-%m-%d')
+        print('[system] {} dementia meaningful location data analysis started'.format(today))
 
         # 해당일에 저장된 위치 정보를 모두 가져옴
-        #location_list = location_info.query.filter(and_(location_info.dementia_key == data, location_info.date == today)).order_by(location_info.date.desc(), location_info.time.desc()).all()
-        location_list = location_info.query.filter_by(dementia_key = data).order_by(location_info.date.desc(), location_info.time.desc()).all()
+        location_list = location_info.query.filter(location_info.date == today).order_by(location_info.dementia_key.desc(), location_info.time.desc()).first
 
+        print('[system] {}'.format(index))
+        index += 1
+        errfile = f'error_{today}.txt'
         if location_list:
-            
-            filename = f'location_data_for_dementia_key_{data}.txt'
-            with open(filename, 'w') as file:
-                for location in location_list:
-                    file.write(f'{location.latitude}, {location.longitude}, {location.date}, {location.time}\n')
+            # dementia_key 별로 위치 정보를 분류하여 파일 작성 및 분석 수행
+            dementia_keys = set([location.dementia_key for location in location_list])
+            for key in dementia_keys:
+                key_location_list = [location for location in location_list if location.dementia_key == key]
 
-            
-            LA = LocationAnalyzer(filename)
+                # 만약 key_location_list의 길이가 100보다 작다면 넘어감
+                if len(key_location_list) <= 100:
+                    with open(errfile, 'a') as file:
+                        file.write(f'{key} dementia location data not enough\n')
+                    continue
 
-            predict_meaningful_location_data = LA.gmeansFunc()
-
-            response_data = {'status': 'success', 'message': 'Meaningful location data sent successfully', 'result': predict_meaningful_location_data}
-            json_response = jsonify(response_data)
-            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
-
-
-            return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
-
-        elif len(location_list) <= 10:
-
-            response_data = {'status': 'error', 'message': 'Location data not enough'}
-
-            json_response = jsonify(response_data)
-            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
-
-            return json_response, LOCDATANOTENOUGH, {'Content-Type': 'application/json; charset = utf-8' }
-        
+                # 파일 작성
+                filename = f'location_data_for_dementia_key_{key}_{today}.txt'
+                with open(filename, 'w') as file:
+                    for location in key_location_list:
+                        file.write(f'{location.latitude},{location.longitude},{location.date},{location.time}\n')
+                # 분석 수행
+                LA = LocationAnalyzer(filename)
+                predict_meaningful_location_data = LA.gmeansFunc()
+                # 의미 있는 위치 정보 저장
+                new_meaningful_location = meaningful_location_info(
+                    dementia_key=key,
+                    latitude=predict_meaningful_location_data[0],
+                    longitude=predict_meaningful_location_data[1]
+                )
+                db.session.add(new_meaningful_location)
+                db.session.commit()
+                print(f'[system] {key} dementia meaningful location data saved successfully')
         else:
-            # 예외 처리 코드
+            # 예외 처리 코드                
             print("location_list가 비어 있습니다.")
+        print('[system] {} dementia meaningful location data analysis finished'.format(today))
         
     except Exception as e:
-
-        response_data = {'status': 'error', 'message': str(e)}
-
-        return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' }
+        return e

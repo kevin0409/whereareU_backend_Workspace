@@ -2,20 +2,21 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from .config import Config
+from apscheduler.schedulers.background import BackgroundScheduler
 import os
 
 db = SQLAlchemy()
+
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     CORS(app)
 
-    # 다른 설정 및 확장 추가 가능
-
+    # 다른 설정 및 확장 추가 가능 
     db.init_app(app)
 
-    from .routes import nok_info_routes, dementia_info_routes, is_connected_routes, location_info_routes, send_location_info_routes, user_login_routes, user_info_modification_routes, caculate_dementia_avarage_walking_speed_routes, send_meaningful_location_info_routes
+    from .routes import nok_info_routes, dementia_info_routes, is_connected_routes, location_info_routes, send_location_info_routes, user_login_routes, user_info_modification_routes, caculate_dementia_avarage_walking_speed_routes, analye_schedule
     app.register_blueprint(nok_info_routes)
     app.register_blueprint(dementia_info_routes)
     app.register_blueprint(is_connected_routes)
@@ -24,7 +25,9 @@ def create_app():
     app.register_blueprint(user_login_routes)
     app.register_blueprint(user_info_modification_routes)
     app.register_blueprint(caculate_dementia_avarage_walking_speed_routes)
-    app.register_blueprint(send_meaningful_location_info_routes)
+    app.register_blueprint(analye_schedule)
+
+    
 
     return app
 
