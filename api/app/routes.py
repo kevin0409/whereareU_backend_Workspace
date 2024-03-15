@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from .models import db, dementia_info, nok_info, location_info, meaningful_location_info
+from .models import db, dementia_info, nok_info, location_info, meaningful_location_info, sensor_info
 from .random_generator import RandomNumberGenerator
 from .update_user_status import UpdateUserStatus
 from sqlalchemy import and_
@@ -240,14 +240,19 @@ def receive_location_info():
     try:
         data = request.json
         json_data = json.dumps(data)
+
+        rng = RandomNumberGenerator()
         
         _dementia_key = data.get('dementiaKey')
         
         existing_dementia = dementia_info.query.filter_by(dementia_key=_dementia_key).first()
 
+
         if existing_dementia:
             # UpdateUserStatus 클래스의 인스턴스 생성
             user_status_updater = UpdateUserStatus()
+
+            unique_matching_key = rng.generate_unique_random_numbers(100000, 999999)
 
             accelerationsensor = data.get('accelerationsensor')
             gyrosensor = data.get('gyrosensor')
@@ -265,27 +270,38 @@ def receive_location_info():
                 longitude=data.get('longitude'),
                 bearing = data.get('bearing'),
                 user_status=int(prediction[0]),  # 예측 결과로 업데이트
-                accelerationsensor_x=accelerationsensor[0],
-                accelerationsensor_y=accelerationsensor[1],
-                accelerationsensor_z=accelerationsensor[2],
-                gyrosensor_x=gyrosensor[0],
-                gyrosensor_y=gyrosensor[1],
-                gyrosensor_z=gyrosensor[2],
-                directionsensor_x=directionsensor[0],
-                directionsensor_y=directionsensor[1],
-                directionsensor_z=directionsensor[2],
                 lightsensor=lightsensor[0],
                 battery=data.get('battery'),
                 isInternetOn=data.get('isInternetOn'),
                 isGpsOn=data.get('isGpsOn'),
                 isRingstoneOn=data.get('isRingstoneOn'),
-                current_speed = data.get('currentSpeed')
+                current_speed = data.get('currentSpeed'),
+                matching_key = str(unique_matching_key)
             )
-
-            print(int(prediction[0]))
 
             db.session.add(new_location)
             db.session.commit()
+
+            new_sensors = []
+            for i in range(60):
+                new_sensor = sensor_info(
+                    accel_x=accelerationsensor.x[i],
+                    accel_y = accelerationsensor.y[i],
+                    accel_z = accelerationsensor.z[i],
+                    gyro_x = gyrosensor.x[i],
+                    gyro_y = gyrosensor.y[i],
+                    gyro_z = gyrosensor.z[i],
+                    direc_x = directionsensor.x[i],
+                    direc_y = directionsensor.y[i],
+                    direc_z = directionsensor.z[i],
+                    matching_key = str(unique_matching_key)
+                )
+                new_sensors.append(new_sensor)
+
+            db.session.bulk_save_objects(new_sensors)
+            db.session.commit()
+
+            print(int(prediction[0]))
             response_data = {'status': 'success', 'message': 'Location data received successfully', 'result' : int(prediction[0])} # 임의로 예측 결과를 전송
 
             json_response = jsonify(response_data)
@@ -488,6 +504,7 @@ def analyze_meaningful_location():
         else:
             # 예외 처리 코드                
             print("location_list가 비어 있습니다.")
+            
         print('[system] {} dementia meaningful location data analysis finished'.format(today))
         
     except Exception as e:

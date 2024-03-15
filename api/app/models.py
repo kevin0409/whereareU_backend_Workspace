@@ -40,6 +40,7 @@ class location_info(db.Model):
     isRingstoneOn = db.Column(db.Integer)
     isGpsOn = db.Column(db.Boolean)
     current_speed = db.Column(db.Float)
+    matching_key = db.Column(db.String(20))
 
 class meaningful_location_info(db.Model):
     num = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -48,3 +49,16 @@ class meaningful_location_info(db.Model):
     time = db.Column(db.String(20))
     latitude = db.Column(db.Double)
     longitude = db.Column(db.Double)
+
+class sensor_info(db.Model):
+    num = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    accel_x = db.Column(db.Float)
+    accel_y = db.Column(db.Float)
+    accel_z = db.Column(db.Float)
+    gyro_x = db.Column(db.Float)
+    gyro_y = db.Column(db.Float)
+    gyro_z = db.Column(db.Float)
+    direc_x = db.Column(db.Float)
+    direc_y = db.Column(db.Float)
+    direc_z = db.Column(db.Float)
+    matching_key = db.Column(db.String(20))
