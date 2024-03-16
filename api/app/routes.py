@@ -19,6 +19,7 @@ send_location_info_routes = Blueprint('send_live_location_info_routes', __name__
 user_login_routes = Blueprint('user_login_routes', __name__)
 user_info_modification_routes = Blueprint('user_info_modification_routes', __name__)
 caculate_dementia_avarage_walking_speed_routes = Blueprint('caculate_dementia_avarage_walking_speed', __name__)
+get_user_info_routes = Blueprint('get_user_info', __name__)
 analye_schedule = Blueprint('analye_schedule', __name__)
 
 # 상태코드 정의
@@ -371,6 +372,7 @@ def modify_user_info():
 
         is_dementia = data.get('isDementia')
         is_name_changed = data.get('isNameChanged')
+        update_rate = data.get('updateRate')
 
         if is_dementia == 0: # 보호자
             existing_nok = nok_info.query.filter_by(nok_key=data.get('key')).first()
@@ -379,6 +381,13 @@ def modify_user_info():
                     existing_nok.nok_name = data.get('name')
                 elif is_name_changed == 0: # 전화번호 변경
                     existing_nok.nok_phonenumber = data.get('phoneNumber')
+
+                if update_rate == "0":
+                    pass
+
+                else:
+                    existing_nok.update_rate = update_rate
+
                 db.session.commit()
                 print('[system] NOK info modified successfully')
                 response_data = {'status': 'success', 'message': 'User info modified successfully'}
@@ -402,8 +411,14 @@ def modify_user_info():
             if existing_dementia:
                 if is_name_changed == 1: # 이름 변경
                     existing_dementia.dementia_name = data.get('name')
-                if is_name_changed == 0: # 전화번호 변경
+                elif is_name_changed == 0: # 전화번호 변경
                     existing_dementia.dementia_phonenumber = data.get('phoneNumber')
+
+                if update_rate == "0":
+                    pass
+
+                else:
+                    existing_dementia.update_rate = update_rate
 
                 db.session.commit()
                 print('[system] Dementia info modified successfully')
@@ -457,6 +472,44 @@ def caculate_dementia_average_walking_speed():
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), UNDEFERR
+    
+@get_user_info_routes.route('/get-user-info', methods=['GET'])
+def get_user_info():
+    try:
+        dementia_key = request.args.get('dementiaKey')
+
+        dementia_info_record = dementia_info.query.filter_by(dementia_key=dementia_key).first()
+        nok_info_record = nok_info.query.filter_by(dementia_info_key=dementia_key).order_by(nok_info.num.desc()).first()
+        
+        if dementia_info_record is None or nok_info_record is None:
+            response_data = {'status': 'error', 'message': 'User info not found'}
+            return jsonify(response_data), KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+        else:
+
+            result = {
+                'dementiaInfoRecord': {
+                    'dementiaKey': dementia_info_record.dementia_key,
+                    'dementiaName': dementia_info_record.dementia_name,
+                    'dementiaPhoneNumber': dementia_info_record.dementia_phonenumber,
+                    'updateRate' : dementia_info_record.update_rate
+                },
+                'nokInfoRecord': {
+                    'nokKey': nok_info_record.nok_key,
+                    'nokName': nok_info_record.nok_name,
+                    'nokPhoneNumber': nok_info_record.nok_phonenumber,
+                    'updateRate' : nok_info_record.update_rate
+                }
+            }
+
+            response_data = {'status': 'success', 'message': 'User info sent successfully', 'result': result}
+
+            return jsonify(response_data), SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+
+    
+    except Exception as e:
+        response_data = {'status': 'error', 'message': str(e)}
+        return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' }
+
     
 @analye_schedule.route('/analyze_meaningful_location')
 def analyze_meaningful_location():

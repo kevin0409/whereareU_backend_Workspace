@@ -5,6 +5,7 @@ class nok_info(db.Model):
     nok_key = db.Column(db.String(20), unique=True)
     nok_name = db.Column(db.String(255))
     nok_phonenumber = db.Column(db.String(20))
+    update_rate = db.Column(db.Integer)
     dementia_info_key = db.Column(db.String(20), db.ForeignKey('dementia_info.dementia_key'))
     dementia_info = db.relationship('dementia_info', back_populates='nok_info')
 
@@ -13,6 +14,7 @@ class dementia_info(db.Model):
     dementia_key = db.Column(db.String(20), unique=True)
     dementia_name = db.Column(db.String(255))
     dementia_phonenumber = db.Column(db.String(20))
+    update_rate = db.Column(db.Integer)
     nok_info = db.relationship('nok_info', back_populates='dementia_info')
 
 
