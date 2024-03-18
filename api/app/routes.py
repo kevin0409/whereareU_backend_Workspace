@@ -253,7 +253,7 @@ def receive_location_info():
             # UpdateUserStatus 클래스의 인스턴스 생성
             user_status_updater = UpdateUserStatus()
 
-            unique_matching_key = rng.generate_unique_random_numbers(100000, 999999)
+            unique_matching_key = rng.generate_unique_random_number(100000, 999999)
 
             accelerationsensor = data.get('accelerationsensor')
             gyrosensor = data.get('gyrosensor')
@@ -261,7 +261,7 @@ def receive_location_info():
             lightsensor = data.get('lightsensor')
 
             # 예측 수행
-            prediction = user_status_updater.predict(json_data)
+            prediction = user_status_updater.predict(json_data) # 모델 수정 필요
 
             new_location = location_info(
                 dementia_key=data.get('dementiaKey'),
@@ -270,7 +270,7 @@ def receive_location_info():
                 latitude=data.get('latitude'),
                 longitude=data.get('longitude'),
                 bearing = data.get('bearing'),
-                user_status=int(prediction[0]),  # 예측 결과로 업데이트
+                #user_status=int(prediction[0]),  # 예측 결과로 업데이트
                 lightsensor=lightsensor[0],
                 battery=data.get('battery'),
                 isInternetOn=data.get('isInternetOn'),
@@ -282,19 +282,28 @@ def receive_location_info():
 
             db.session.add(new_location)
             db.session.commit()
+            accel_x = data.get('accelerationsensor')["x"]
+            accel_y = data.get('accelerationsensor')["y"]
+            accel_z = data.get('accelerationsensor')["z"]
+            gyro_x = data.get('gyrosensor')["x"]
+            gyro_y = data.get('gyrosensor')["y"]
+            gyro_z = data.get('gyrosensor')["z"]
+            direc_x = data.get('directionsensor')["x"]
+            direc_y = data.get('directionsensor')["y"]
+            direc_z = data.get('directionsensor')["z"]
 
             new_sensors = []
             for i in range(60):
                 new_sensor = sensor_info(
-                    accel_x=accelerationsensor.x[i],
-                    accel_y = accelerationsensor.y[i],
-                    accel_z = accelerationsensor.z[i],
-                    gyro_x = gyrosensor.x[i],
-                    gyro_y = gyrosensor.y[i],
-                    gyro_z = gyrosensor.z[i],
-                    direc_x = directionsensor.x[i],
-                    direc_y = directionsensor.y[i],
-                    direc_z = directionsensor.z[i],
+                    accel_x = accel_x[i],
+                    accel_y = accel_y[i],
+                    accel_z = accel_z[i],
+                    gyro_x = gyro_x[i],
+                    gyro_y = gyro_y[i],
+                    gyro_z = gyro_z[i],
+                    direc_x = direc_x[i],
+                    direc_y = direc_y[i],
+                    direc_z = direc_z[i],
                     matching_key = str(unique_matching_key)
                 )
                 new_sensors.append(new_sensor)
@@ -302,7 +311,7 @@ def receive_location_info():
             db.session.bulk_save_objects(new_sensors)
             db.session.commit()
 
-            print(int(prediction[0]))
+            #print(int(prediction[0]))
             response_data = {'status': 'success', 'message': 'Location data received successfully', 'result' : int(prediction[0])} # 임의로 예측 결과를 전송
 
             json_response = jsonify(response_data)
