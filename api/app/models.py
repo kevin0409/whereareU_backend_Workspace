@@ -52,7 +52,7 @@ class meaningful_location_info(db.Model):
     latitude = db.Column(db.Double)
     longitude = db.Column(db.Double)
 
-class sensor_info(db.Model):
+class sensor_info(db.Model): # 미사용 테이블
     num = db.Column(db.Integer, primary_key=True, autoincrement=True)
     accel_x = db.Column(db.Float)
     accel_y = db.Column(db.Float)

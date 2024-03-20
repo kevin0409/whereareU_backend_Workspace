@@ -3,7 +3,7 @@ from .LocationAnalyzer import LocationAnalyzer
 from datetime import datetime
 from flask import Blueprint
 
-index = 1
+index = 1 # for debugging
 
 analye_schedule = Blueprint('analye_schedule', __name__)
 
@@ -22,8 +22,8 @@ class AnalyzerScheduler:
             # 해당일에 저장된 위치 정보를 모두 가져옴
             location_list = location_info.query.filter(location_info.date == today).order_by(location_info.dementia_key.desc(), location_info.time.desc()).first
 
-            print('[system] {}'.format(index))
-            index += 1
+            print('[system] {}'.format(index)) # for debugging
+            index += 1 # for debugging
 
             errfile = f'error_{today}.txt'
             if location_list:
