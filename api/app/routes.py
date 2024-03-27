@@ -1,12 +1,10 @@
 from flask import Blueprint, request, jsonify
-from .models import db, dementia_info, nok_info, location_info, meaningful_location_info, sensor_info
+from .models import db, dementia_info, nok_info, location_info, meaningful_location_info
 from .random_generator import RandomNumberGenerator
 from .update_user_status import UpdateUserStatus
 from sqlalchemy import and_
-from .LocationAnalyzer import LocationAnalyzer
 from .extentions import scheduler
 
-import datetime
 import json
 
 
@@ -21,7 +19,8 @@ user_login_routes = Blueprint('user_login_routes', __name__)
 user_info_modification_routes = Blueprint('user_info_modification_routes', __name__)
 caculate_dementia_avarage_walking_speed_routes = Blueprint('caculate_dementia_avarage_walking_speed', __name__)
 get_user_info_routes = Blueprint('get_user_info', __name__)
-analyze_schedule = Blueprint('analyze_schedule', __name__)
+update_rate_routes = Blueprint('update_rate', __name__)
+send_meaningful_location_info_routes = Blueprint('send-meaningful-location-info', __name__)
 
 # 상태코드 정의
 SUCCESS = 200
@@ -114,7 +113,7 @@ def receive_dementia_info():
         _dementia_name = dementia_data.get('name')
         _dementia_phonenumber = dementia_data.get('phoneNumber')
 
-        duplicate_dementia = dementia_info.query.filter(and_(dementia_info.dementia_name == _dementia_name, dementia_info.dementia_phonenumber == _dementia_phonenumber)).first()
+        duplicate_dementia = dementia_info.query.filter_by(dementia_phonenumber = _dementia_phonenumber).first() # 전화번호는 고유값이므로 전화번호로 중복 확인
         if duplicate_dementia:
 
             _dementia_key = duplicate_dementia.dementia_key
@@ -125,7 +124,6 @@ def receive_dementia_info():
             response_data = {'status': 'success', 'message': 'Dementia paitient data received successfully', 'result': result}
 
             print('[system] dementia info {} already exists'.format(_dementia_name))
-        
         else:
             # 인증번호 생성
             for _ in range(10):
@@ -386,18 +384,19 @@ def modify_user_info():
         data = request.json
 
         is_dementia = data.get('isDementia')
-        changeOption = data.get('changeOption') # 0: 전화번호 변경, 1: 이름 변경, 2: 업데이트 주기 변경
-        update_rate = data.get('updateRate')
+        before_name = data.get('name')
+        before_phonenumber = data.get('phoneNumber')
 
         if is_dementia == 0: # 보호자
             existing_nok = nok_info.query.filter_by(nok_key=data.get('key')).first()
             if existing_nok:
-                if changeOption == 0: # 전화번호 변경
-                    existing_nok.nok_phonenumber = data.get('phoneNumber')
-                elif changeOption == 1: # 이름 변경
-                    existing_nok.nok_name = data.get('name')
-                elif changeOption == 2:
-                    existing_nok.update_rate = update_rate
+
+                # 수정된 정보를 제외한 나머지 정보들은 기존의 값을 그대로 수신
+                if not existing_nok.nok_name == before_name:
+                    existing_nok.nok_name = before_name
+                
+                if not existing_nok.nok_phonenumber == before_phonenumber:
+                    existing_nok.nok_phonenumber = before_phonenumber
 
                 db.session.commit()
 
@@ -422,12 +421,11 @@ def modify_user_info():
         elif is_dementia == 1: # 보호 대상자
             existing_dementia = dementia_info.query.filter_by(dementia_key=data.get('key')).first()
             if existing_dementia:
-                if changeOption == 0: # 전화번호 변경
-                    existing_dementia.nok_phonenumber = data.get('phoneNumber')
-                elif changeOption == 1: # 이름 변경
-                    existing_dementia.nok_name = data.get('name')
-                elif changeOption == 2:
-                    existing_dementia.update_rate = update_rate
+                if not existing_dementia.dementia_name == before_name:
+                    existing_dementia.dementia_name = before_name
+                
+                if not existing_dementia.dementia_phonenumber == before_phonenumber:
+                    existing_dementia.dementia_phonenumber = before_phonenumber
                 
 
                 db.session.commit()
@@ -451,7 +449,56 @@ def modify_user_info():
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' }
+    
+@update_rate_routes.route('/update-rate', methods=['POST'])
+def modify_updating_rate():
+    try:
+        data = request.json
 
+        is_dementia = data.get('isDementia')
+        _key = data.get('key')
+        _update_rate = data.get('updateRate')
+
+        # 보호자와 보호대상자 테이블 모두 업데이트
+
+        if is_dementia == 0: # 보호자
+            existing_nok = nok_info.query.filter_by(nok_key=_key).first()
+            if existing_nok:
+
+                connected_dementia = dementia_info.query.filter_by(dementia_key = existing_nok.dementia_info_key).first()
+                existing_nok.update_rate = _update_rate
+                connected_dementia.update_rate = _update_rate
+                
+            else:
+                response_data = {'status': 'error', 'message': 'User info not found'}
+                return jsonify(response_data), KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+            
+        elif is_dementia == 1: # 보호 대상자
+            existing_dementia = dementia_info.query.filter_by(dementia_key=_key).first()
+            if existing_dementia:   
+                
+                connected_nok = nok_info.query.filter_by(dementia_info_key = existing_dementia.dementia_key).all()
+                existing_dementia.update_rate = _update_rate
+                for nok in connected_nok:
+                    nok.update_rate = _update_rate
+        
+            else:
+                response_data = {'status': 'error', 'message': 'User info not found'}
+                return jsonify(response_data), KEYNOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+            
+        db.session.commit()
+
+        response_data = {'status': 'success', 'message': 'Update rate successfully'}
+        
+        json_response = jsonify(response_data)
+        json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+        return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+    
+    except Exception as e:
+        response_data = {'status': 'error', 'message': str(e)}
+        return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' }
+    
 @caculate_dementia_avarage_walking_speed_routes.route('/caculate-dementia-avarage-walking-speed', methods=['POST'])
 def caculate_dementia_average_walking_speed():
     try:
@@ -521,15 +568,50 @@ def get_user_info():
     except Exception as e:
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' }
+    
+@send_meaningful_location_info_routes.route('/send-meaningful-location-info', methods=['GET'])
+def send_meaningful_location_info():
+    try:
+        
 
-#@analyze_schedule.route('/analyze-meaningful-location', methods=['GET'])
-@scheduler.task('cron', id='analyze_meaningful_location', hour=0, minute=0, second=0, timezone='Asia/Seoul')
+        _key = request.args.get('dementiaKey')
+
+        meaningful_location_list = meaningful_location_info.query.filter_by(dementia_key=_key).all()
+
+        if meaningful_location_list:
+            result = []
+            for location in meaningful_location_list:
+                result.append({
+                    'latitude': location.latitude,
+                    'longitude': location.longitude,
+                    'date' : location.day_of_the_week,
+                    "time" : location.time
+                })
+            response_data = {'status': 'success', 'message': 'Meaningful location data sent successfully', 'result': result}
+
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+            return json_response, SUCCESS, {'Content-Type': 'application/json; charset = utf-8' }
+        else:
+            response_data = {'status': 'error', 'message': 'Meaningful location data not found'}
+
+            json_response = jsonify(response_data)
+            json_response.headers['Content-Length'] = len(json_response.get_data(as_text=True))
+
+            return json_response, LOCDATANOTFOUND, {'Content-Type': 'application/json; charset = utf-8' }
+        
+    except Exception as e:
+        response_data = {'status': 'error', 'message': str(e)}
+        return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' }
+
+'''
+@scheduler.task('cron', id='analyze_meaningful_location', hour=0, minute=0, second=0, timezone='Asia/Seoul', misfire_grace_time=120)
 def analyze_meaningful_location():
     try:
         with scheduler.app.app_context():
             today = datetime.datetime.now()
-            #test = today - datetime.timedelta(days=4)
-            #test = test.strftime('%Y-%m-%d')
+            today = today.strftime('%Y-%m-%d')
 
             print('[system] {} dementia meaningful location data analysis started'.format(today))
             
@@ -578,3 +660,4 @@ def analyze_meaningful_location():
     except Exception as e:
         print(e)
         return str(e)
+'''

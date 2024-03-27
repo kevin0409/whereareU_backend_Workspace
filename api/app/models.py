@@ -47,20 +47,7 @@ class location_info(db.Model):
 class meaningful_location_info(db.Model):
     num = db.Column(db.Integer, primary_key=True, autoincrement=True)
     dementia_key = db.Column(db.String(20))
-    date = db.Column(db.String(20))
+    day_of_the_week= db.Column(db.String(20))
     time = db.Column(db.String(20))
     latitude = db.Column(db.Double)
     longitude = db.Column(db.Double)
-
-class sensor_info(db.Model): # 미사용 테이블
-    num = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    accel_x = db.Column(db.Float)
-    accel_y = db.Column(db.Float)
-    accel_z = db.Column(db.Float)
-    gyro_x = db.Column(db.Float)
-    gyro_y = db.Column(db.Float)
-    gyro_z = db.Column(db.Float)
-    direc_x = db.Column(db.Float)
-    direc_y = db.Column(db.Float)
-    direc_z = db.Column(db.Float)
-    matching_key = db.Column(db.String(20))
