@@ -42,7 +42,6 @@ class location_info(db.Model):
     isRingstoneOn = db.Column(db.Integer)
     isGpsOn = db.Column(db.Boolean)
     current_speed = db.Column(db.Float)
-    matching_key = db.Column(db.String(20))
 
 class meaningful_location_info(db.Model):
     num = db.Column(db.Integer, primary_key=True, autoincrement=True)

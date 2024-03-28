@@ -2,9 +2,11 @@ from flask import Blueprint, request, jsonify
 from .models import db, dementia_info, nok_info, location_info, meaningful_location_info
 from .random_generator import RandomNumberGenerator
 from .update_user_status import UpdateUserStatus
+from .LocationAnalyzer import LocationAnalyzer
 from sqlalchemy import and_
 from .extentions import scheduler
 
+import datetime
 import json
 
 
@@ -241,8 +243,6 @@ def receive_location_info():
     try:
         data = request.json
         json_data = json.dumps(data)
-
-        rng = RandomNumberGenerator()
         
         _dementia_key = data.get('dementiaKey')
         
@@ -252,8 +252,6 @@ def receive_location_info():
         if existing_dementia:
             # UpdateUserStatus 클래스의 인스턴스 생성
             user_status_updater = UpdateUserStatus()
-
-            unique_matching_key = rng.generate_unique_random_number(100000, 999999)
 
             lightsensor = data.get('lightsensor')
 
@@ -283,36 +281,11 @@ def receive_location_info():
                 isInternetOn=data.get('isInternetOn'),
                 isGpsOn=data.get('isGpsOn'),
                 isRingstoneOn=data.get('isRingstoneOn'),
-                current_speed = data.get('currentSpeed'),
-                matching_key = str(unique_matching_key)
+                current_speed = data.get('currentSpeed')
             )
 
             db.session.add(new_location)
             db.session.commit()
-
-            # 센서 정보 저장
-            """accel = data.get('accelerationsensor')
-            gyro = data.get('gyrosensor')
-            direc = data.get('directionsensor')
-
-            new_sensors = []
-            for i in range(60):
-                new_sensor = sensor_info(
-                    accel_x = accel_x[i],
-                    accel_y = accel_y[i],
-                    accel_z = accel_z[i],
-                    gyro_x = gyro_x[i],
-                    gyro_y = gyro_y[i],
-                    gyro_z = gyro_z[i],
-                    direc_x = direc_x[i],
-                    direc_y = direc_y[i],
-                    direc_z = direc_z[i],
-                    matching_key = str(unique_matching_key)
-                )
-                new_sensors.append(new_sensor)
-
-            db.session.bulk_save_objects(new_sensors)
-            db.session.commit()"""
 
             print("[system] {} {}".format(data.get("dementiaKey"), int(prediction[0])))
 
@@ -605,12 +578,14 @@ def send_meaningful_location_info():
         response_data = {'status': 'error', 'message': str(e)}
         return jsonify(response_data), UNDEFERR, {'Content-Type': 'application/json; charset = utf-8' }
 
-'''
-@scheduler.task('cron', id='analyze_meaningful_location', hour=0, minute=0, second=0, timezone='Asia/Seoul', misfire_grace_time=120)
+
+@scheduler.task('cron', id='analyze_meaningful_location', hour=17, minute=14, second=0, timezone='Asia/Seoul', misfire_grace_time=120)
 def analyze_meaningful_location():
     try:
         with scheduler.app.app_context():
             today = datetime.datetime.now()
+            today = today - datetime.timedelta(days = 9)
+            #print(today)
             today = today.strftime('%Y-%m-%d')
 
             print('[system] {} dementia meaningful location data analysis started'.format(today))
@@ -641,8 +616,10 @@ def analyze_meaningful_location():
                     for i in range(len(predict_meaningful_location_data)-1):
                         new_meaningful_location = meaningful_location_info(
                             dementia_key=key,
-                            latitude=predict_meaningful_location_data[i][1],
-                            longitude=predict_meaningful_location_data[i][1]
+                            latitude=predict_meaningful_location_data[i][0][0],
+                            longitude=predict_meaningful_location_data[i][0][1],
+                            time = predict_meaningful_location_data[i][2],
+                            day_of_the_week = predict_meaningful_location_data[i][3]
                         )
                         meaningful_location_record.append(new_meaningful_location)
 
@@ -654,10 +631,11 @@ def analyze_meaningful_location():
 
             else:
                 print("location_list가 비어 있습니다.")
+                pass
 
+            db.session.commit()
             print('[system] {} dementia meaningful location data analysis finished'.format(today))
             
     except Exception as e:
         print(e)
         return str(e)
-'''
