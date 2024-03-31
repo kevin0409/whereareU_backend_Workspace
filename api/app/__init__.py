@@ -35,7 +35,7 @@ def create_app():
 
     # Flask 애플리케이션 컨텍스트 설정
     with app.app_context():
-        from .routes import nok_info_routes, dementia_info_routes, is_connected_routes, location_info_routes, send_location_info_routes, user_login_routes, user_info_modification_routes, caculate_dementia_avarage_walking_speed_routes, get_user_info_routes, update_rate_routes, send_meaningful_location_info_routes
+        from .routes import nok_info_routes, dementia_info_routes, is_connected_routes, location_info_routes, send_location_info_routes, user_login_routes, user_info_modification_routes, caculate_dementia_avarage_walking_speed_routes, get_user_info_routes, update_rate_routes, send_meaningful_location_info_routes, send_location_history_rotues
         app.register_blueprint(nok_info_routes)
         app.register_blueprint(dementia_info_routes)
         app.register_blueprint(is_connected_routes)
@@ -47,6 +47,7 @@ def create_app():
         app.register_blueprint(get_user_info_routes)
         app.register_blueprint(update_rate_routes)
         app.register_blueprint(send_meaningful_location_info_routes)
+        app.register_blueprint(send_location_history_rotues)
         
 
     scheduler.start()
