@@ -14,14 +14,15 @@ db = Database()
 session = next(db.get_session())
 sched = BackgroundScheduler(timezone="Asia/Seoul")
 
-SUCCESS = 200
+
+'''SUCCESS = 200
 WRONG_REQUEST = 400
 KEYNOTFOUND = 600
 LOCDATANOTFOUND = 650
 LOCDATANOTENOUGH = 660
 LOGINSUCCESS = 700
 LOGINFAILED = 750
-UNDEFERR = 500
+UNDEFERR = 500'''
 
 @router.post("/receive-nok-info")
 async def receive_nok_info(request: Request):
@@ -594,14 +595,18 @@ async def send_location_history(request: Request):
         location_list = session.query(models.location_info).filter_by(dementia_key = _key, date = date).all()
 
         if location_list:
-            result = []
+            locHistory = []
 
             for location in location_list:
-                result.append({
+                locHistory.append({
                     'latitude': location.latitude,
                     'longitude': location.longitude,
                     'time': location.time
                 })
+
+            result = {
+                'locationHistory': locHistory
+            }
 
             response = {
                 'status': 'success',
@@ -623,7 +628,6 @@ async def send_location_history(request: Request):
     
     finally:
         session.close()
-
 
 #스케줄러 비활성화
 """@sched.scheduled_job('cron', hour=0, minute=18, id = 'analyze_location_data')
