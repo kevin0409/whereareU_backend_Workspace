@@ -1,6 +1,7 @@
 import json
 import pandas as pd
 import pickle
+from .bodymodel import ReceiveLocationRequest
 
 class UpdateUserStatus:
     def __init__(self):
@@ -9,21 +10,15 @@ class UpdateUserStatus:
         with open(model_filename, 'rb') as model_file:
             self.model = pickle.load(model_file)
 
-    def predict(self, data):
+    def predict(self, accel, gyro, direction):
         # 전처리 함수 호출
-        preprocessed_data = self.preprocessing(data)
+        preprocessed_data = self.preprocessing(accel, gyro, direction)
         
         # 모델 예측
         prediction = self.model.predict(preprocessed_data)
         return prediction
 
-    def preprocessing(self, data):
-
-        json_data = json.loads(data)
-
-        accel = json_data.get('accelerationsensor')
-        gyro = json_data.get('gyrosensor')
-        direction = json_data.get('directionsensor')
+    def preprocessing(self, accel, gyro, direction):
 
         processed_data = [{
             'x1': accel[0],

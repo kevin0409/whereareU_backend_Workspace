@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from .database import Database
 from sqlalchemy import *
 from mangum import Mangum
+from fastapi.responses import JSONResponse
 
 
 # FastAPI 인스턴스 생성
@@ -19,3 +20,9 @@ def create_app():
 
     return app
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"message": exc.detail}
+    )
