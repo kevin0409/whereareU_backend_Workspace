@@ -106,14 +106,3 @@ class LocationAnalyzer:
 
         data_list = data_df.values.tolist()
         return data_list
-    
-
-
-if __name__ == '__main__':
-    # 파일 경로 가져오기
-    filePath = r"C:\Users\sk002\OneDrive\바탕 화면\학교\Yoodori\Geolife Trajectories 1.3\Data\003\Trajectory\20081202160051.txt"
-    la = LocationAnalyzer(filePath)
-
-    data = la.gmeansFunc()
-    
-    print(data)

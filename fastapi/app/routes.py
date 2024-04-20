@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import JSONResponse
 from . import models
 from .random_generator import RandomNumberGenerator
 from .update_user_status import UpdateUserStatus
@@ -25,9 +24,9 @@ sched = BackgroundScheduler(timezone="Asia/Seoul")
 
 위치 정보, 키 없음 = 404
 
-
 정의되지 않은 오류 = 500
 '''
+
 
 # Define API endpoint
 @router.post("/noks",status_code=status.HTTP_201_CREATED, responses = {201 : {"model" : ReceiveNokInfoResponse, "description" : "유저 등록 성공" },404: {"model": ErrorResponse, "description": "보호 대상자 키 조회 실패"}}, description="보호자가 보호 대상자의 정보를 등록")
@@ -128,7 +127,7 @@ async def receive_dementia_info(request: ReceiveDementiaInfoRequest):
     finally:
         session.close()
 
-@router.post("/connection", status_code=status.HTTP_200_OK, responses = {200 : {"model" : ConnectionResponse, "description" : "연결 확인 성공" }, 400: {"model": ErrorResponse, "description": "연결 실패"}}, description="보호자와 보호 대상자의 연결 확인")
+@router.post("/connection", responses = {200 : {"model" : ConnectionResponse, "description" : "연결 확인 성공" }, 400: {"model": ErrorResponse, "description": "연결 실패"}}, description="보호자와 보호 대상자의 연결 확인")
 async def is_connected(request: ConnectionRequest):
 
     _dementia_key = request.dementiaKey
@@ -203,7 +202,7 @@ async def receive_user_login(request: loginRequest):
     finally:
         session.close()
 
-@router.post("/locations/dementias", responses = {200 : {"model" : CommonResponse, "description" : "위치 정보 전송 성공" }, 404: {"model": ErrorResponse, "description": "보호 대상자 키 조회 실패"}}, description="보호 대상자의 위치 정보를 전송 | isRingstoneOn : 0(무음), 1(진동), 2(벨소리)")
+@router.post("/locations/dementias", responses = {200 : {"model" : TempResponse, "description" : "위치 정보 전송 성공" }, 404: {"model": ErrorResponse, "description": "보호 대상자 키 조회 실패"}}, description="보호 대상자의 위치 정보를 전송 | isRingstoneOn : 0(무음), 1(진동), 2(벨소리)")
 async def receive_location_info(request: ReceiveLocationRequest):
 
     try:
@@ -253,7 +252,8 @@ async def receive_location_info(request: ReceiveLocationRequest):
 
             response = {
                 'status': 'success',
-                'message': 'Location data received'
+                'message': 'Location data received',
+                'result' : int(prediction[0])
             }
 
         else:
@@ -266,7 +266,7 @@ async def receive_location_info(request: ReceiveLocationRequest):
     finally:
         session.close()
 
-@router.get("/locations/noks/{dementiaKey}", responses = {200 : {"model" : GetLocationResponse, "description" : "위치 정보 전송 성공" }, 404: {"model": ErrorResponse, "description": "위치 정보 없음"}}, description="보호자에게 보호 대상자의 위치 정보를 전송 | userStatus : 1(정지), 2(도보), 3(차량), 4(지하철) | isRingstoneOn : 0(무음), 1(진동), 2(벨소리)")
+@router.get("/locations/noks", responses = {200 : {"model" : GetLocationResponse, "description" : "위치 정보 전송 성공" }, 404: {"model": ErrorResponse, "description": "위치 정보 없음"}}, description="보호자에게 보호 대상자의 위치 정보를 전송(쿼리 스트링) | userStatus : 1(정지), 2(도보), 3(차량), 4(지하철) | isRingstoneOn : 0(무음), 1(진동), 2(벨소리)")
 async def send_live_location_info(dementiaKey : int):
 
     try:
@@ -461,7 +461,7 @@ async def caculate_dementia_average_walking_speed(requset: AverageWalkingSpeedRe
     finally:
         session.close()
 
-@router.get("/users/info/{nokKey}", responses = {200 : {"model" : GetUserInfoResponse, "description" : "유저 정보 전송 성공" }, 404: {"model": ErrorResponse, "description": "유저 정보 없음"}}, description="보호자와 보호 대상자 정보 전달")
+@router.get("/users/info", responses = {200 : {"model" : GetUserInfoResponse, "description" : "유저 정보 전송 성공" }, 404: {"model": ErrorResponse, "description": "유저 정보 없음"}}, description="보호자와 보호 대상자 정보 전달(쿼리 스트링)")
 async def get_user_info(nokKey : int):
     _nok_key = nokKey
 
@@ -507,7 +507,7 @@ async def get_user_info(nokKey : int):
     finally:
         session.close()
 
-@router.get("/locatoins/meaningful/{dementiaKey}", responses = {200 : {"model" : MeaningfulLocResponse, "description" : "의미장소 전송 성공" }, 404: {"model": ErrorResponse, "description": "의미 장소 없음"}}, description="보호 대상자의 의미 장소 정보 전달")
+@router.get("/locatoins/meaningful", responses = {200 : {"model" : MeaningfulLocResponse, "description" : "의미장소 전송 성공" }, 404: {"model": ErrorResponse, "description": "의미 장소 없음"}}, description="보호 대상자의 의미 장소 정보 전달(쿼리 스트링)")
 async def send_meaningful_location_info(dementiaKey : int):
     _key = dementiaKey
 
@@ -547,7 +547,7 @@ async def send_meaningful_location_info(dementiaKey : int):
     finally:
         session.close()
 
-@router.get("/locations/history/{date}/{dementiaKey}", responses = {200 : {"model" : LocHistoryResponse, "description" : "위치 이력 전송 성공" }, 404: {"model": ErrorResponse, "description": "위치 이력 없음"}}, description="보호 대상자의 위치 이력 정보 전달")
+@router.get("/locations/history", responses = {200 : {"model" : LocHistoryResponse, "description" : "위치 이력 전송 성공" }, 404: {"model": ErrorResponse, "description": "위치 이력 없음"}}, description="보호 대상자의 위치 이력 정보 전달(쿼리 스트링) | date : YYYY-MM-DD")
 async def send_location_history(date : str, dementiaKey : int):
     _key = dementiaKey
 
@@ -588,7 +588,7 @@ async def send_location_history(date : str, dementiaKey : int):
 
 
 #스케줄러 비활성화
-"""@sched.scheduled_job('cron', hour=0, minute=18, id = 'analyze_location_data')
+"""@sched.scheduled_job('cron', hour=0, minute=0, id = 'analyze_location_data')
 def analyze_location_data():
     today = datetime.datetime.now()
     today = today - datetime.timedelta(days=1) # 어제 날짜의 위치 정보를 분석
