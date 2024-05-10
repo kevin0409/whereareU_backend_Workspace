@@ -6,8 +6,8 @@ Base = declarative_base()
 class nok_info(Base):
     __tablename__ = 'nok_info'
 
-    num = Column(Integer, index=True)
-    nok_key = Column(String, primary_key=True)
+    num = Column(Integer, index=True, primary_key=True)
+    nok_key = Column(String)
     nok_name = Column(String)
     nok_phonenumber = Column(String)
     update_rate = Column(String)
@@ -16,11 +16,17 @@ class nok_info(Base):
 class dementia_info(Base):
     __tablename__ = 'dementia_info'
 
-    num = Column(Integer, index = True)
-    dementia_key = Column(String, primary_key=True)
+    num = Column(Integer, index = True, primary_key=True)
+    dementia_key = Column(String)
     dementia_name = Column(String)
     dementia_phonenumber = Column(String)
     update_rate = Column(String)
+
+class refresh_token_info(Base):
+    __tablename__ = 'refresh_token_info'
+
+    key = Column(String, primary_key=True)
+    refresh_token = Column(String)
 
 class location_info(Base):
     __tablename__ = 'location_info'
@@ -32,7 +38,7 @@ class location_info(Base):
     latitude = Column(Double)
     longitude = Column(Double)
     bearing = Column(Float)
-    user_status = Column(Integer)
+    user_status = Column(String)
     accelerationsensor_x = Column(Float)
     accelerationsensor_y = Column(Float)
     accelerationsensor_z = Column(Float)
@@ -56,5 +62,19 @@ class meaningful_location_info(Base):
     dementia_key = Column(String)
     day_of_the_week = Column(String)
     time = Column(String)
+    latitude = Column(Double)
+    longitude = Column(Double)
+    address = Column(String)
+    key = Column(String)
+
+class police_info(Base):
+    __tablename__ = 'police_info'
+
+    num = Column(Integer, index=True, primary_key=True)
+    key = Column(String)
+    policeName = Column(String)
+    policeAddress = Column(String)
+    policePhoneNumber = Column(String)
+    distance = Column(Integer)
     latitude = Column(Double)
     longitude = Column(Double)

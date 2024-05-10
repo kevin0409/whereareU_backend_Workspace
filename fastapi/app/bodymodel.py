@@ -1,20 +1,26 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Dict
 
 # Define request and response models
+class accessToken(BaseModel):
+    accessToken: str = Field(examples=["ksjdnfjkdasnfljsknafljansdfjlsakn"])
+
 class CommonResponse(BaseModel):
     status: str = Field("success")
     message: str = Field("메~시~지~")
+    result : accessToken
 
 class dementiaInfoRecord(BaseModel):
     dementiaKey : str = Field(examples=["123456"])
     dementiaName : str = Field(examples=["성춘향"])
     dementiaPhoneNumber : str = Field(examples=["010-1234-5678"])
+    updateRate : int = Field(examples=["15"], description="초 단위")
 
 class nokInfoRecord(BaseModel):
     nokKey : str = Field(examples=["123456"])
     nokName : str = Field(examples=["홍길동"])
     nokPhoneNumber : str = Field(examples=["010-1234-5678"])
+    updateRate : int = Field(examples=["15"], description="초 단위")
 
 class UserRecord(BaseModel):
     dementiaInfoRecord: dementiaInfoRecord
@@ -23,6 +29,8 @@ class UserRecord(BaseModel):
 class nokResult(BaseModel):
     dementiaInfoRecord: dementiaInfoRecord
     nokKey: str = Field(examples=["123456"])
+    accessToken: str = Field(examples=["ksjdnfjkdasnfljsknafljansdfjlsakn"])
+    refreshToken: str = Field(examples=["ksjdnfjkdasnfljsknafljansdfjlsakn"])
 
 class ReceiveNokInfoRequest(BaseModel):
     keyFromDementia : int = Field(examples=["123456"])
@@ -47,9 +55,10 @@ class ReceiveDementiaInfoResponse(BaseModel):
     message: str = Field("메~시~지~")
     result: dementiaResult
 
-
 class connectionResult(BaseModel):
     nokInfoRecord: nokInfoRecord
+    accessToken: str = Field(examples=["ksjdnfjkdasnfljsknafljansdfjlsakn"])
+    refreshToken: str = Field(examples=["ksjdnfjkdasnfljsknafljansdfjlsakn"])
 
 class ConnectionRequest(BaseModel):
     dementiaKey : int = Field(examples=["123456"])
@@ -64,7 +73,6 @@ class loginRequest(BaseModel):
     isDementia : int = Field(examples=["1"], description="1 : 보호대상자, 0 : 보호자")
 
 class ReceiveLocationRequest(BaseModel):
-    dementiaKey : int = Field(examples=["123456"])
     date : str = Field(examples=["2024-03-19"], description="yyyy-mm-dd")
     time : str = Field(examples=["12:00:00"])
     latitude : float = Field(examples=["37.123456"])
@@ -97,23 +105,17 @@ class GetLocationResponse(BaseModel):
     result: LastLoc
 
 class ModifyUserInfoRequest(BaseModel):
-    key : int = Field(examples=["123456"])
-    isDementia : int = Field(examples=["1"], description="1 : 보호대상자, 0 : 보호자")
     name : str = Field(examples=["김이름"])
     phoneNumber : str = Field(examples=["010-1234-5678"])
 
 class ModifyUserUpdateRateRequest(BaseModel):
-    key : int = Field(examples=["123456"])
-    isDementia : int = Field(examples=["1"])
     updateRate : int = Field(examples=["15"], description="초 단위")
-
-class AverageWalkingSpeedRequest(BaseModel):
-    dementiaKey : int = Field(examples=["123456"])
 
 class AverageAndLastLoc(BaseModel):
     averageSpeed : float = Field(examples=["2.0"])
     lastLatitude : float = Field(examples=["37.123456"])
     lastLongitude : float = Field(examples=["127.123456"])
+    addressName : str = Field(examples=["서울특별시 강남구 니가 사는 그 집"])
 
 class AverageWalkingSpeedResponse(BaseModel):
     status: str = Field("success")
@@ -125,14 +127,29 @@ class GetUserInfoResponse(BaseModel):
     message: str = Field("메~시~지~")
     result: UserRecord
 
+class timeInfoList(BaseModel):
+    dayOfTheWeek : str = Field(examples=["월요일"])
+    time : str = Field(examples=["0408"])
+
+class PoliceStationInfoList(BaseModel):
+    policeName : str = Field(examples=["서울동작경찰서"])
+    policePhoneNumber : str = Field(examples=["02-1234-5678"])
+    policeAddress : str = Field(examples=["서울 동작구 노량진동 72-35"])
+    roadAddress : str = Field(examples=["서울 동작구 노량진로 148"])
+    distance : int = Field(examples=["2005"], description="미터 단위")
+    latitude : float = Field(examples=["37.123456"])
+    longitude : float = Field(examples=["127.123456"])
+
+
 class MeaningfulLoc(BaseModel):
-    dayOfTheWeek : str = Field(examples=["Monday"])
-    time : str = Field(examples=["0408"], description="04 ~ 08")
-    latitude : float
-    longitude : float
+    address : str = Field(examples=["서울특별시 강남구 니가 사는 그 집"])
+    timeInfo : timeInfoList
+    latitude : float = Field(examples=["37.123456"])
+    longitude : float = Field(examples=["127.123456"])
+    policeStationInfo : List[PoliceStationInfoList]
 
 class MeaningfulLocRecord(BaseModel):
-    meaningfulLocations : List[MeaningfulLoc] = Field(..., examples=[{"dayOfTheWeek": "Monday", "time": "0408", "latitude": 37.123456, "longitude": 127.123456}])
+    meaningfulLocations : List[MeaningfulLoc]
 
 class MeaningfulLocResponse(BaseModel):
     status: str = Field("success")
@@ -142,7 +159,9 @@ class MeaningfulLocResponse(BaseModel):
 class LocHis(BaseModel):
     latitude : float = Field(examples=["37.123456"])
     longitude : float = Field(examples=["127.123456"])
-    time : str = Field(examples=["12:00:00"])
+    time : str = Field(examples=["12:00:00 or 12:00:00,12:01:00"], description='정지 일땐 시작, 끝 시간임')
+    userStatus : int = Field(examples=["1"], description = " 1 : 정지, 2 : 도보, 3 : 차량, 4 : 지하철")
+    distance : int = Field(examples=["2005"], description="미터 단위(소수점 2자리까지)")
 
 class LocHisRecord(BaseModel):
     locationHistory : List[LocHis]
@@ -160,3 +179,13 @@ class TempResponse(BaseModel):
     status: str = Field("success")
     message: str = Field("메~시~지~")
     result : int = Field("1", description="1(정지), 2(도보), 3(차량), 4(지하철)")
+
+class Token(BaseModel):
+    accessToken: str = Field("ksjdnfjkdasnfljsknafljansdfjlsakn")
+    refreshToken: str = Field("ksjdnfjkdasnfljsknafljansdfjlsakn")
+    tokenType: str = Field("bearer")
+
+class TokenResponse(BaseModel):
+    status: str = Field("success")
+    message: str = Field("메~시~지~")
+    result : List[Token]
