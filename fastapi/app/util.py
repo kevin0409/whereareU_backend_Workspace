@@ -31,12 +31,12 @@ class JWTService:
             userInfo = session.query(models.nok_info).filter_by(nok_name = userName, nok_key = key).first()
 
             if userInfo:
-                return userInfo, 0
+                return userInfo, "nok"
             else:
                 userInfo = session.query(models.dementia_info).filter_by(dementia_name = userName, dementia_key = key).first()
             
                 if userInfo:
-                    return userInfo, 1
+                    return userInfo, "dementia"
                 else:
                     return None
             

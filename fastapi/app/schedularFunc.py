@@ -16,7 +16,7 @@ from pytz import timezone
 
 
 
-kakao = Local(service_key=Config.service_key)
+kakao = Local(service_key=Config.kakao_service_key)
 
 
 class SchedulerFunc:

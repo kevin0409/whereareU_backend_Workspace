@@ -22,12 +22,6 @@ class dementia_info(Base):
     dementia_phonenumber = Column(String)
     update_rate = Column(String)
 
-class refresh_token_info(Base):
-    __tablename__ = 'refresh_token_info'
-
-    key = Column(String, primary_key=True)
-    refresh_token = Column(String)
-
 class location_info(Base):
     __tablename__ = 'location_info'
 
@@ -54,12 +48,15 @@ class location_info(Base):
     isRingstoneOn = Column(Integer)
     isGpsOn = Column(Boolean)
     current_speed = Column(String)
+    isInSafeArea = Column(Boolean)
+    nearSafeArea = Column(String)
 
 class meaningful_location_info(Base):
     __tablename__ = 'meaningful_location_info'
 
     num = Column(Integer, index=True, primary_key=True)
     dementia_key = Column(String)
+    date = Column(String)
     day_of_the_week = Column(String)
     time = Column(String)
     latitude = Column(Double)
@@ -78,3 +75,28 @@ class police_info(Base):
     distance = Column(Integer)
     latitude = Column(Double)
     longitude = Column(Double)
+
+class refresh_token_info(Base):
+    __tablename__ = 'refresh_token_info'
+
+    key = Column(String, primary_key=True)
+    refresh_token = Column(String)
+    fcm_token = Column(String)
+
+class safe_area_info(Base):
+    __tablename__ = 'safe_area_info'
+
+    area_key = Column(String, primary_key=True)
+    group_key = Column(String)
+    area_name = Column(String)
+    dementia_key = Column(String)
+    latitude = Column(Double)
+    longitude = Column(Double)
+    radius = Column(Integer)
+
+class safe_area_group_info(Base):
+    __tablename__ = 'safe_area_group_info'
+
+    group_key = Column(String, primary_key=True)
+    group_name = Column(String)
+    dementia_key = Column(String)

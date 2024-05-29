@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from fastapi.security import OAuth2PasswordRequestForm, APIKeyHeader
+from fastapi.security import OAuth2PasswordRequestForm, APIKeyHeader, OAuth2PasswordBearer
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from passlib.context import CryptContext
 from haversine import haversine
+from PyKakao import Local
 
 from . import models
 from .random_generator import RandomNumberGenerator
@@ -12,11 +14,15 @@ from .bodymodel import *
 from .util import JWTService
 from .config import Config
 from .schedularFunc import SchedulerFunc
-
-from apscheduler.schedulers.background import BackgroundScheduler
+from .fcm_notification import send_push_notification
+#from .LocationPredict import ForecastLSTMClassification, Preprocessing
 
 import asyncio
 import datetime
+import requests
+import urllib.parse
+import pandas as pd
+import time
 
 
 router = APIRouter()
@@ -26,6 +32,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 jwt = JWTService()
 schedFunc = SchedulerFunc()
 sched = BackgroundScheduler(timezone="Asia/Seoul", daemon=True)
+kakao = Local(service_key=Config.kakao_service_key)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
 
 
 
@@ -89,6 +98,32 @@ async def test_login(from_data: OAuth2PasswordRequestForm = Depends()):
     finally:
         session.close()"""
 
+'''@router.get("/login/google")
+async def google_login():
+    return {
+        "url": f"https://accounts.google.com/o/oauth2/auth?response_type=code&client_id={Config.GOOGLE_CLIENT_ID}&redirect_uri={Config.GOOGLE_REDIRECT_URI}&scope=openid%20profile%20email&access_type=offline"
+    }
+
+@router.get("/auth/google")
+async def auth_google(code: str):
+    token_url = "https://accounts.google.com/o/oauth2/token"
+    decoded_code = urllib.parse.unquote(code)
+    data = {
+        "code": decoded_code,
+        "client_id": Config.GOOGLE_CLIENT_ID,
+        "client_secret": Config.GOOGLE_CLIENT_SECRET,
+        "redirect_uri": Config.GOOGLE_REDIRECT_URI,
+        "grant_type": "authorization_code",
+    }
+    response = requests.post(token_url, data=data)
+    access_token = response.json().get("access_token")
+    user_info = requests.get("https://www.googleapis.com/oauth2/v1/userinfo", headers={"Authorization": f"Bearer {access_token}"})
+    people = people_service.people().connections().list('people/me', personFields='names,emailAddresses')
+    return user_info.json()
+
+@router.get("/token")
+async def get_token(token: str = Depends(oauth2_scheme)):
+    return jwt.decode(token, Config.GOOGLE_CLIENT_SECRET, algorithms=["HS256"])'''
 
 
 
@@ -117,15 +152,20 @@ async def receive_nok_info(request: ReceiveNokInfoRequest):
                     unique_key = rng.generate_unique_random_number(100000, 999999)
                 
                 _key = str(unique_key)
+                print(_key)
 
-                new_nok = models.nok_info(nok_key=_key, nok_name=_nok_name, nok_phonenumber=_nok_phonenumber, dementia_info_key=_key_from_dementia)
+                new_nok = models.nok_info(nok_key=_key, nok_name=_nok_name, nok_phonenumber=_nok_phonenumber, dementia_info_key=_key_from_dementia, update_rate=1)
                 session.add(new_nok)
                 
 
             access_token = jwt.create_access_token(_nok_name, _key)
-            refresh_token = jwt.create_refresh_token(_nok_name, _key)
+            if not session.query(models.refresh_token_info).filter_by(key=_key).first():
+                refresh_token = jwt.create_refresh_token(_nok_name, _key)
+                new_token = models.refresh_token_info(key=_key, refresh_token=refresh_token)
+                session.add(new_token)
+            else:
+                refresh_token = None
 
-            new_token = models.refresh_token_info(key=_key, refresh_token=refresh_token)
             result = {
                 'dementiaInfoRecord' : {
                         'dementiaKey' : existing_dementia.dementia_key,
@@ -179,7 +219,7 @@ async def receive_dementia_info(request: ReceiveDementiaInfoRequest):
 
             #_key = pwd_context.hash(unique_key)
 
-            new_dementia = models.dementia_info(dementia_key=_key, dementia_name=_dementia_name, dementia_phonenumber=_dementia_phonenumber)
+            new_dementia = models.dementia_info(dementia_key=_key, dementia_name=_dementia_name, dementia_phonenumber=_dementia_phonenumber, update_rate = 1)
             session.add(new_dementia)
             session.commit()
 
@@ -210,11 +250,14 @@ async def is_connected(request: ConnectionRequest):
         if existing_nok:
             dementia_info = session.query(models.dementia_info).filter_by(dementia_key = _dementia_key).first()
             access_token = jwt.create_access_token(dementia_info.dementia_name, dementia_info.dementia_key)
-            refresh_token = jwt.create_refresh_token(dementia_info.dementia_name, dementia_info.dementia_key)
+            if not session.query(models.refresh_token_info).filter_by(key=dementia_info.dementia_key).first():
+                refresh_token = jwt.create_refresh_token(dementia_info.dementia_name, dementia_info.dementia_key)
+                new_token = models.refresh_token_info(key=dementia_info.dementia_key, refresh_token=refresh_token)
+                session.add(new_token)
 
-            new_token = models.refresh_token_info(key=dementia_info.dementia_key, refresh_token=refresh_token)
+            else:
+                refresh_token = None
 
-            session.add(new_token)
             session.commit()
             result = {
                 'nokInfoRecord':{
@@ -246,42 +289,36 @@ async def is_connected(request: ConnectionRequest):
 @router.post("/login", responses = {200 : {"model" : TokenResponse, "description" : "로그인 성공" }, 400: {"model": ErrorResponse, "description": "로그인 실패"}}, description="보호자와 보호 대상자의 로그인 | username : 이름, password : key -> 이 두개만 채워서 보내면 됨")
 async def receive_user_login(from_data: OAuth2PasswordRequestForm = Depends()):
     try:
+        # 사용자 확인
         user = jwt.get_user(from_data.username, from_data.password, session)
+        
         if not user:
+            # 인증 실패 시 예외 발생
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incorrect key",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or password",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        # Dict 형태로 반환
-        '''def create_access_token(self, data: dict) -> str:
-                return self._create_token(data, self.access_token_expire_time)'''
-        
-        if user[1] == 0:
+
+        # 사용자의 권한에 따라 액세스 토큰 및 리프레시 토큰 생성
+        if user[1] == "nok": # 보호자
             access_token = jwt.create_access_token(user[0].nok_name, user[0].nok_key)
-            
-            #refresh_token_info 테이블 디비에 저장
+            refresh_token = jwt.create_refresh_token(user[0].nok_name, user[0].nok_key)
             if not session.query(models.refresh_token_info).filter_by(key=user[0].nok_key).first():
-                refresh_token = jwt.create_refresh_token(user[0].nok_name, user[0].nok_key)
                 new_token = models.refresh_token_info(key=user[0].nok_key, refresh_token=refresh_token)
                 session.add(new_token)
-            else: 
-                refresh_token = None
-
-
-        else:
+        elif user[1] == "dementia": # 보호 대상자
             access_token = jwt.create_access_token(user[0].dementia_name, user[0].dementia_key)
-            
-            #refresh_token 디비에 저장
+            refresh_token = jwt.create_refresh_token(user[0].dementia_name, user[0].dementia_key)
             if not session.query(models.refresh_token_info).filter_by(key=user[0].dementia_key).first():
-                refresh_token = jwt.create_refresh_token(user[0].dementia_name, user[0].dementia_key)
                 new_token = models.refresh_token_info(key=user[0].dementia_key, refresh_token=refresh_token)
                 session.add(new_token)
-            else:
-                refresh_token = None
 
+
+        # 트랜잭션 커밋
         session.commit()
 
+        # 응답 구성
         result = {
             'accessToken': access_token,
             'refreshToken': refresh_token,
@@ -296,7 +333,15 @@ async def receive_user_login(from_data: OAuth2PasswordRequestForm = Depends()):
 
         return response
             
+    except Exception as e:
+        # 예외 발생 시 롤백 후 에러 메시지 반환
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while processing the request",
+        )
     finally:
+        # 세션 닫기
         session.close()
 
 @router.post("/locations/dementias", responses = {200 : {"model" : TempResponse, "description" : "위치 정보 전송 성공" }, 404: {"model": ErrorResponse, "description": "보호 대상자 키 조회 실패"}}, description="보호 대상자의 위치 정보를 전송 | isRingstoneOn : 0(무음), 1(진동), 2(벨소리)")
@@ -410,7 +455,7 @@ async def modify_user_info(request: ModifyUserInfoRequest, user_info : int = Dep
     try:
         user = jwt.get_current_user(user_info, session)
 
-        if user[1] == 0: #보호자
+        if user[1] == 'nok': #보호자
             existing_nok = session.query(models.nok_info).filter_by(nok_key = user[0].nok_key).first()
 
             if not existing_nok.nok_name == _new_name:
@@ -427,7 +472,7 @@ async def modify_user_info(request: ModifyUserInfoRequest, user_info : int = Dep
             session.add(update_refresh_token)
 
 
-        elif user[1] == 1: #보호대상자
+        elif user[1] == 'dementia': #보호대상자
             existing_dementia = session.query(models.dementia_info).filter_by(dementia_key = user[0].dementia_key).first()
 
             if not existing_dementia.dementia_name == _new_name:
@@ -472,7 +517,7 @@ async def modify_updatint_rate(request: ModifyUserUpdateRateRequest, user_info :
     #보호자와 보호대상자 모두 업데이트
     try:
         user = jwt.get_current_user(user_info, session)
-        if user[1] == 0: #보호자
+        if user[1] == 'nok': #보호자
             existing_nok = session.query(models.nok_info).filter_by(nok_key = user[0].nok_key).first()
 
             connected_dementia = session.query(models.dementia_info).filter_by(dementia_key = existing_nok.dementia_info_key).first()
@@ -486,7 +531,7 @@ async def modify_updatint_rate(request: ModifyUserUpdateRateRequest, user_info :
                 'message': 'User update rate modified'
             }
 
-        elif user[1] == 1:
+        elif user[1] == 'dementia':
             existing_dementia = session.query(models.dementia_info).filter_by(dementia_key = user[0].dementia_key).first()
 
             connected_nok = session.query(models.nok_info).filter_by(dementia_info_key = existing_dementia.dementia_key).first()
@@ -693,7 +738,7 @@ async def send_location_history(_date : str, user_info : int = Depends(APIKeyHea
                     'distance': distance
                 })
             else:
-                locHistory[-1]['time'] = locHistory[-1]['time'][:8] + ',' + location.time
+                locHistory[-1]['time'] = locHistory[-1]['time'][:8] + '~' + location.time
 
             prev_location = current_location
 
@@ -715,8 +760,119 @@ async def send_location_history(_date : str, user_info : int = Depends(APIKeyHea
 
         return response
 
+@router.get("/locations/predict", responses = {200 : {"model" : PredictLocationResponse, "description" : "위치 예측 성공" }, 404: {"model": ErrorResponse, "description": "위치 정보 부족"}}, description="보호 대상자의 다음 위치 예측(쿼리 스트링)")
+async def predict_location(user_info : int = Depends(APIKeyHeader(name = "Authorization"))):
+    dementia_key = jwt.get_current_user(user_info, session)[0].dementia_key
+
+    try:
+        loc_list = []
+        location_list = session.query(models.location_info).filter_by(dementia_key=dementia_key).order_by(models.location_info.num.desc()).limit(10).all()
+
+        for location in location_list:
+            if location.user_status == "정지":
+                status = 1
+            elif location.user_status == "도보":
+                status = 2
+            elif location.user_status == "차량":
+                status = 3
+            elif location.user_status == "지하철":
+                status = 4
+            else:
+                status = location.user_status
+            loc_list.append({
+                'date' : location.date,
+                'time': location.time,
+                'latitude': location.latitude,
+                'longitude': location.longitude,
+                'user_status' : status
+            })
+
+        loc_list_df = pd.DataFrame(loc_list, columns=['date', 'time', 'latitude', 'longitude', 'user_status'])
+
+        pr = Preprocessing(loc_list_df)
+        df, meaningful_df = pr.run_analysis()
+            
+        test_idx = int(len(df) * 0.8)
+        df_train = df.iloc[:test_idx]
+        df_test = df.iloc[test_idx:]
+
+        seq_len = 5  # 150개의 데이터를 feature로 사용
+        steps = 5  # 향후 150개 뒤의 y를 예측
+        single_output = False
+        metrics = ["accuracy"]  # 모델 성능 지표
+        lstm_params = {
+            "seq_len": seq_len,
+            "epochs": 100,  # epochs 반복 횟수
+            "patience": 30,  # early stopping 조건
+            "steps_per_epoch": 5,  # 1 epochs 시 dataset을 5개로 분할하여 학습
+            "learning_rate": 0.03,
+            "lstm_units": [64, 32],  # Dense Layer: 2, Unit: (64, 32)
+            "activation": "softmax",
+            "dropout": 0,
+            "validation_split": 0.3,  # 검증 데이터셋 30%
+        }
+        fl = ForecastLSTMClassification(class_num=len(df['y'].unique()))
+        model = fl.fit_lstm(
+            df=df_train,
+            steps=steps,
+            single_output=single_output,
+            verbose=True,
+            metrics=metrics,
+            **lstm_params,
+        )
+        y_pred = fl.pred(df=df_test, 
+                    steps=steps, 
+                    num_classes=len(df['y'].unique()),
+                    seq_len=seq_len, 
+                    single_output=single_output)
+        
+        print(y_pred)
+        print(meaningful_df.iloc[y_pred].iloc[-1])
+
+        pred_loc = meaningful_df.iloc[y_pred].iloc[-1]
+
+        geo = kakao.geo_coord2address(pred_loc.longitude, pred_loc.latitude)
+
+        if not geo['documents'][0]['road_address'] == None:
+            xy2addr = geo['documents'][0]['road_address']['address_name'] + " " + geo['documents'][0]['road_address']['building_name']
+                    
+        else:
+            xy2addr = geo['documents'][0]['address']['address_name']
+
+        pol_info = {
+            "policeName" : "이름",
+            "policeAddress" : "주소",
+            "policePhoneNumber" : "전번",
+            "distance" : "거리",
+            "latitude" : "위도",
+            "longitude" : "경도"
+        }
+        pred_loc = {
+            "latitude" : pred_loc.latitude,
+            "longitude" : pred_loc.longitude,
+            "address" : xy2addr
+        }
+        result = {
+            "predictLocation" : pred_loc,
+            "policeInfo" : pol_info
+        }
+        response = {
+            "status" : "susccess",
+            "message" : "predict complete",
+            "result" : result
+        }
+
+        return response
+    
+    finally:
+        session.close()
 
 
+@router.post("/test/fcm", description="FCM 테스트")
+async def send_fcm(title: str, body: str, token: str, data : str):
+
+    return send_push_notification(token, body, title, data)
+    
 
 
 '''#스케줄러 비활성화
